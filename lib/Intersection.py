@@ -9,33 +9,23 @@ class Intersesction_Navigator:
     def __init__(self):
         self.__intersections={}
         intersection_size = 35
-        for i in range(1,4,1):
+        for i in range(1,4,1): #test
+        # for i in range(1,7,1): # NoteBook Test
             section = None
-            a = intersection_size/2
-            b = intersection_size/4
+            ### NoteBook Test ####
             # if(i==2):
             #     section=Intersection(i,np.array([None,3,4,5,2]),(2,2))
-            #     section.entries[1]=(7.5,-3.75)
-            #     section.entries[2]=(-3.75,-7.5)
-            #     section.entries[3]=(-7.5,3.75)
-            
+            ############
+
             ####test####
             if (i == 1):
                 section = Intersection(i,np.array([1,2,3,None,None]),(2,1))
-                section.entries[0] = (b,a)
-                section.entries[1] = (a,-b)
-                section.entries[2] = (-b,-a)
             if (i == 2):
                 section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
-                section.entries[0] = (b,a)
-                section.entries[2] = (-b,-a)
-                section.entries[3] = (-a,b)
             if (i == 3):
                 section = Intersection(i,np.array([9,10,None,12,None]),(4,3))
-                section.entries[0] = (b,a)
-                section.entries[1] = (a,-b)
-                section.entries[3] = (-a,b)
             if section is not None:
+            ############
                 self.__intersections[i]=section
     def Indentify_intersection(self,arucoid):
         pos_id = None
@@ -60,6 +50,7 @@ class Intersesction_Navigator:
                     u,v=imgpt[0][0]
                     cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
             entry =self.__intersections[intersection_id].entries[entry_point]
+            node = self.__intersections[intersection_id].entryNodes[entry_point]
             if  entry is not None:
                 camera_pos = np.array([[0.],[0.],[0.]])
                 # XYZ  = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_pos)
@@ -68,12 +59,12 @@ class Intersesction_Navigator:
                 # XYZ_front = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_front_pos)
                 XYZ_front = Intersesction_Navigator.camera2world(rvec,tvec,camera_front_pos)
                 direction_vector = np.array([XYZ_front[0][0]-XYZ[0][0],XYZ_front[1][0]-XYZ[1][0]])
-                JO_vector = np.array([-XYZ[0][0],-XYZ[1][0]])
-                OE_vector = np.array([entry[0],entry[1]])
-                JO_distance = Intersesction_Navigator.__distance(JO_vector)+2 # offset to jetbot pos if usiing camera pos
-                JO_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JO_vector)
-                OE_distance = Intersesction_Navigator.__distance(OE_vector)
-                OE_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,OE_vector)
+                JN_vector = np.array([node[0]-XYZ[0][0],node[1]-XYZ[1][0]])
+                NE_vector = np.array([node[0]-entry[0],node[1]-entry[1]])
+                JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
+                JN_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JN_vector)
+                NE_distance = Intersesction_Navigator.__distance(NE_vector)
+                NE_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,NE_vector)
                 # JO_ang = math.degrees(JO_radians)
                 # OE_ang = math.degrees(OE_radians)
                 # cv2.putText(img,str('Pos: ')+str(XYZ[0:2]),(100,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
@@ -84,8 +75,8 @@ class Intersesction_Navigator:
                 u0,v0=imgpt[0][0]
                 if u0>0 and v0 >0 and u0 <img.shape[1] and v0<img.shape[0]:
                     cv2.circle(img,(int(u0),int(v0)),5,(0,0,255),2)
-                Origin_objpt = np.array([[0.,0.,0.]])
-                imgpt,jacobian = cv2.projectPoints(Origin_objpt,rvec,tvec,mtx,dist)
+                Node_objpt = np.array([[node[0],node[1],0.]])
+                imgpt,jacobian = cv2.projectPoints(Node_objpt,rvec,tvec,mtx,dist)
                 u1,v1=imgpt[0][0]
                 img = MyCam.drawline(img,int(u0),int(v0),int(u1),int(v1),(0,255,0),2)
                 E_objpt = np.array([[entry[0],entry[1],0]])
@@ -93,7 +84,7 @@ class Intersesction_Navigator:
                 u3,v3=imgpt[0][0]
                 img = MyCam.drawline(img,int(u1),int(v1),int(u3),int(v3),(0,255,0),2)
             cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
-        return img,JO_radians,JO_distance,OE_radians,OE_distance
+        return img,JN_radians,JN_distance,NE_radians,NE_distance
     def camera2world(rvec:np.array,tvec:np.array,objpt:np.array):
         objpt = np.r_[objpt,[[1]]]
         R,jacobian = cv2.Rodrigues(rvec)
@@ -137,44 +128,49 @@ class Intersection:
     aruco_dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_100)
     aruco_size = 3.8
     aruco_high = 1.2
-    # aruco_distance = 7.5+5
+    # aruco_distance = 7.5+5 # NoteBook Test
     aruco_distance = 18 #test
-    intersection_size = 15
-    intersection_size = 15.5
+    # intersection_size = 15 # NoteBook Test
+    intersection_size = 15.5*2 #test
     def __init__(self,id:int,arucoIds:np.array,pos):
         self.id=id
         self.pos = [pos[0],pos[1]]
         self.entries=[None,None,None,None]
+        self.entryNodes=[None,None,None,None]
         corners = []
         self.ids=[]
         a = self.aruco_distance
         b = self.intersection_size/2
+        b2 = self.intersection_size/4
         c = self.aruco_high
         s = self.aruco_size
         if arucoIds[0] is not None:
             corners.append([[-b+s,a,0],[-b,a,0],[-b,a+s,0],[-b+s,a+s,0]]) #test
-            # corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]])
-            # corners.append([[-7.9,12.9,5],[-11.7,12.7,5],[-11.7,12.9,1.2],[-7.9,12.7,1.2]])
+            # corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) # NoteBook Test
             self.ids.append([arucoIds[0]])
+            self.entries[0] = (b2,b)
+            self.entryNodes[0] = (b2,b2)
         if arucoIds[1] is not None:
             corners.append([[a,b-s,0],[a,b,0],[a+s,b,0],[a+s,b-s,0]]) #test
-            # corners.append([[a,b,c+s],[a,b+s,c+s],[a,b+s,c],[a,b,c]])
-            # corners.append([[12.9,7.9,5],[12.9,11.7,5],[12.9,11.7,1.2],[12.9,7.9,1.2]])
+            # corners.append([[a,b,c+s],[a,b+s,c+s],[a,b+s,c],[a,b,c]]) # NoteBook Test
             self.ids.append([arucoIds[1]])
+            self.entries[1] = (b,-b2)
+            self.entryNodes[1] = (b2,-b2)
         if arucoIds[2] is not None:
             corners.append([[b-s,-a,0],[b,-a,0],[b,-a-s,0],[b-s,-a-s,0]]) #test
-            # corners.append([[b,-a,c+s],[b+s,-a,c+s],[b+s,-a,c],[b,-a,c]])
-            # corners.append([[7.9,-12.9,5],[11.7,-12.7,5],[11.7,-12.9,1.2],[7.9,-12.7,1.2]])
+            # corners.append([[b,-a,c+s],[b+s,-a,c+s],[b+s,-a,c],[b,-a,c]]) # NoteBook Test
             self.ids.append([arucoIds[2]])
+            self.entries[2] = (-b2,-b)
+            self.entryNodes[2] = (-b2,-b2)
         if arucoIds[3] is not None:
             corners.append([[-a,-b+s,0],[-a,-b,0],[-a-s,-b,0],[-a-s,-b+s,0]]) #test
-            # corners.append([[-a,-b,c+s],[-a,-b-s,c+s],[-a,-b-s,c],[-a,-b,c]])
-            # corners.append([[-12.9,-7.9,5],[-12.9,-11.7,5],[-12.9,-11.7,1.2],[-12.9,-7.9,1.2]]) 
+            # corners.append([[-a,-b,c+s],[-a,-b-s,c+s],[-a,-b-s,c],[-a,-b,c]]) # NoteBook Test
             self.ids.append([arucoIds[3]])
+            self.entries[3] = (-b,b2)
+            self.entryNodes[3] = (-b2,b2)
         if arucoIds[4] is not None:
             s2=s/2
             corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]]) 
-            # corners.append([[-1.9,1.9,0],[1.9,1.9,0],[1.9,-1.9,0],[-1.9,-1.9,0]]) 
             self.ids.append([arucoIds[4]])
         self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
         

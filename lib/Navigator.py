@@ -33,8 +33,8 @@ class Navigator:
         self.complete = False
         self.crossPath = None
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id:int,entry_point:int):
-        img,JO_radians,JO_distance,OE_radians,OE_distance = self.IN.navigate(frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point)
-        return img,JO_radians,JO_distance,OE_radians,OE_distance
+        img,JN_radians,JN_distance,NE_radians,NE_distance = self.IN.navigate(frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point)
+        return img,JN_radians,JN_distance,NE_radians,NE_distance
     def __getEntrtpoint(self,i_pos:int,j_pos:int):
         k=0
         for v in self.path:
@@ -116,11 +116,10 @@ class Navigator:
                 self.count+=1
                 # print('Debug1')
             if self.count>0:
-            # if self.count>=0:
-                output_img,JO_radians,JO_distance,OE_radians,OE_distance = self.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry)
-                # output_img,JO_radians,JO_distance,OE_radians,OE_distance = self.navigate(src_img,mtx,dist,corners,ids,2,1)
+                output_img,JN_radians,JN_distance,NE_radians,NE_distance = self.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry)
+                # output_img,JN_radians,JN_distance,NE_radians,NE_distance = self.navigate(src_img,mtx,dist,corners,ids,2,3) #NoteBook Test
                 self.count+=1
-                vectors.append([JO_radians,JO_distance,OE_radians,OE_distance])
+                vectors.append([JN_radians,JN_distance,NE_radians,NE_distance])
                 # print('count '+str(self.count))
             if self.count >20:
                 self.crossPath = np.average(vectors,0)
