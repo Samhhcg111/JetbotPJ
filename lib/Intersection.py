@@ -8,7 +8,6 @@ class Intersesction_Navigator:
     __intersection_size=np.array([15,15])
     def __init__(self):
         self.__intersections={}
-        intersection_size = 35
         for i in range(1,4,1): #test
         # for i in range(1,7,1): # NoteBook Test
             section = None
@@ -27,6 +26,7 @@ class Intersesction_Navigator:
             if section is not None:
             ############
                 self.__intersections[i]=section
+                
     def Indentify_intersection(self,arucoid):
         pos_id = None
         for Intersection_id in self.__intersections:
@@ -37,54 +37,59 @@ class Intersesction_Navigator:
         if pos_id is None:
             print('Not such aruco id : '+str(arucoid))
         return pos_id,pos
+
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int):
         img = frame.copy()
-        rows,cols = frame.shape[:2]
         retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)
-        if rvec is not None and tvec is not None:
-            for entry in self.__intersections[intersection_id].entries:
-                if entry is not None:
-                    en_x,en_y=entry
-                    objpt = np.array([[en_x,en_y,0]])
-                    imgpt,jacobian = cv2.projectPoints(objpt,rvec,tvec,mtx,dist)
-                    u,v=imgpt[0][0]
-                    cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
-            entry =self.__intersections[intersection_id].entries[entry_point]
-            node = self.__intersections[intersection_id].entryNodes[entry_point]
-            if  entry is not None:
-                camera_pos = np.array([[0.],[0.],[0.]])
-                # XYZ  = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_pos)
-                XYZ = Intersesction_Navigator.camera2world(rvec,tvec,camera_pos)
-                camera_front_pos = np.array([[0.],[0.],[1]])
-                # XYZ_front = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_front_pos)
-                XYZ_front = Intersesction_Navigator.camera2world(rvec,tvec,camera_front_pos)
-                direction_vector = np.array([XYZ_front[0][0]-XYZ[0][0],XYZ_front[1][0]-XYZ[1][0]])
-                JN_vector = np.array([node[0]-XYZ[0][0],node[1]-XYZ[1][0]])
-                NE_vector = np.array([node[0]-entry[0],node[1]-entry[1]])
-                JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
-                JN_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JN_vector)
-                NE_distance = Intersesction_Navigator.__distance(NE_vector)
-                NE_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,NE_vector)
-                # JO_ang = math.degrees(JO_radians)
-                # OE_ang = math.degrees(OE_radians)
-                # cv2.putText(img,str('Pos: ')+str(XYZ[0:2]),(100,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
-                # print('Turn '+str(JO_ang)+' go '+str(JO_distance))
-                # print('and Turn '+str(OE_ang)+' go '+str(OE_distance))
-                self_objpt = np.array([[XYZ[0][0],XYZ[1][0],0]])
-                imgpt,jacobian = cv2.projectPoints(self_objpt,rvec,tvec,mtx,dist)
-                u0,v0=imgpt[0][0]
-                if u0>0 and v0 >0 and u0 <img.shape[1] and v0<img.shape[0]:
-                    cv2.circle(img,(int(u0),int(v0)),5,(0,0,255),2)
-                Node_objpt = np.array([[node[0],node[1],0.]])
-                imgpt,jacobian = cv2.projectPoints(Node_objpt,rvec,tvec,mtx,dist)
-                u1,v1=imgpt[0][0]
-                img = MyCam.drawline(img,int(u0),int(v0),int(u1),int(v1),(0,255,0),2)
-                E_objpt = np.array([[entry[0],entry[1],0]])
-                imgpt,jacobian = cv2.projectPoints(E_objpt,rvec,tvec,mtx,dist)
-                u3,v3=imgpt[0][0]
-                img = MyCam.drawline(img,int(u1),int(v1),int(u3),int(v3),(0,255,0),2)
-            cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
+        
+        # draw all entries' points
+        for entry in self.__intersections[intersection_id].entries:
+            if entry is not None:
+                en_x,en_y=entry
+                objpt = np.array([[en_x,en_y,0]])
+                imgpt,jacobian = cv2.projectPoints(objpt,rvec,tvec,mtx,dist)
+                u,v=imgpt[0][0]
+                cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
+
+        ### calculate path vectors
+        entry =self.__intersections[intersection_id].entries[entry_point]
+        node = self.__intersections[intersection_id].entryNodes[entry_point]
+        camera_pos = np.array([[0.],[0.],[0.]])
+        # XYZ  = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_pos)
+        XYZ = Intersesction_Navigator.camera2world(rvec,tvec,camera_pos)
+        camera_front_pos = np.array([[0.],[0.],[1]])
+        # XYZ_front = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_front_pos)
+        XYZ_front = Intersesction_Navigator.camera2world(rvec,tvec,camera_front_pos)
+        direction_vector = np.array([XYZ_front[0][0]-XYZ[0][0],XYZ_front[1][0]-XYZ[1][0]])
+        JN_vector = np.array([node[0]-XYZ[0][0],node[1]-XYZ[1][0]])
+        NE_vector = np.array([node[0]-entry[0],node[1]-entry[1]])
+        JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
+        JN_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JN_vector)
+        NE_distance = Intersesction_Navigator.__distance(NE_vector)
+        NE_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,NE_vector)
+        # JN_ang = math.degrees(JN_radians)
+        # NE_ang = math.degrees(NE_radians)
+        # cv2.putText(img,str('Pos: ')+str(XYZ[0:2]),(100,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
+        # print('Turn '+str(JO_ang)+' go '+str(JO_distance))
+        # print('and Turn '+str(OE_ang)+' go '+str(OE_distance))
+
+        ### Visualize path
+        self_objpt = np.array([[XYZ[0][0],XYZ[1][0],0]])
+        imgpt,jacobian = cv2.projectPoints(self_objpt,rvec,tvec,mtx,dist)
+        u0,v0=imgpt[0][0]
+        if u0>0 and v0 >0 and u0 <img.shape[1] and v0<img.shape[0]:
+            cv2.circle(img,(int(u0),int(v0)),5,(0,0,255),2)
+        Node_objpt = np.array([[node[0],node[1],0.]])
+        imgpt,jacobian = cv2.projectPoints(Node_objpt,rvec,tvec,mtx,dist)
+        u1,v1=imgpt[0][0]
+        img = MyCam.drawline(img,int(u0),int(v0),int(u1),int(v1),(0,255,0),2)
+        E_objpt = np.array([[entry[0],entry[1],0]])
+        imgpt,jacobian = cv2.projectPoints(E_objpt,rvec,tvec,mtx,dist)
+        u3,v3=imgpt[0][0]
+        img = MyCam.drawline(img,int(u1),int(v1),int(u3),int(v3),(0,255,0),2)
+        cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
         return img,JN_radians,JN_distance,NE_radians,NE_distance
+
     def camera2world(rvec:np.array,tvec:np.array,objpt:np.array):
         objpt = np.r_[objpt,[[1]]]
         R,jacobian = cv2.Rodrigues(rvec)
@@ -94,6 +99,7 @@ class Intersesction_Navigator:
         XYZ = np.asmatrix(pinv)*np.mat(objpt)
         XYZ = np.asarray(XYZ)
         return XYZ
+
     def jetbot2world(rvec:np.array,tvec:np.array,objpt:np.array):
         M_CJ = np.mat([[1.13904494e-02,-9.99929001e-01,-3.50012164e-03,-8.56096844e+00],[-6.00409085e-01,-4.04022905e-03,-7.99682816e-01,1.13824197e+01],[ 7.99611898e-01,1.12102515e-02,-6.00412477e-01,-8.25225470e+00],[-7.09838495e-18,6.56462602e-17,0.00000000e+00,1.00000000e+00]])
         objpt = np.r_[objpt,[[1]]]
@@ -104,6 +110,7 @@ class Intersesction_Navigator:
         XYZ = np.asmatrix(pinv)*M_CJ*np.mat(objpt)
         XYZ = np.asarray(XYZ)
         return XYZ
+
     def __clockwiseAng(vector1,vector2):
         ref_v = np.array([0,1])
         def Angle_2D(v1,v2):
@@ -121,9 +128,11 @@ class Intersesction_Navigator:
         if radians<0:
             radians+=2*math.pi
         return radians
+
     def __distance(vector):
         distance = math.sqrt(vector[0]*vector[0]+vector[1]*vector[1])
         return distance
+
 class Intersection:
     aruco_dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_100)
     aruco_size = 3.8
