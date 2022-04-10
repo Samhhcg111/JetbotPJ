@@ -100,16 +100,31 @@ class LandFollower:
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds] 
 
-        # Fit a second order polynomial to each
-        left_fit = np.polyfit(lefty, leftx, 2)
-        right_fit = np.polyfit(righty, rightx, 2)
+        # Determine if num of points is enougth for fitting
+        len_left = len(leftx)
+        len_right = len(rightx)
+        if len_left>=3 and len_right>=3:
+            lane = True
+        else:
+            lane = False
 
-        # Create points in lines for plot
-        left_line_pts = np.array([[left_fit[0]*y**2 + left_fit[1]*y + left_fit[2], y] for y in range(200,401)], np.int32)
-        right_line_pts = np.array([[right_fit[0]*y**2 + right_fit[1]*y + right_fit[2], y] for y in range(200,401)], np.int32)
-        center_line_pts = np.array((left_line_pts + right_line_pts)/2, np.int32)
+        if lane:
+            # Fit a second order polynomial to each
+            left_fit = np.polyfit(lefty, leftx, 2)
+            right_fit = np.polyfit(righty, rightx, 2)
 
-        return left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts
+            print('left: ', left_fit)
+            #print('\nright: ', right_fit)
+
+            # Create points in lines for plot
+            left_line_pts = np.array([[left_fit[0]*y**2 + left_fit[1]*y + left_fit[2], y] for y in range(200,401)], np.int32)
+            right_line_pts = np.array([[right_fit[0]*y**2 + right_fit[1]*y + right_fit[2], y] for y in range(200,401)], np.int32)
+            center_line_pts = np.array((left_line_pts + right_line_pts)/2, np.int32)
+
+            return left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts
+
+        else:
+            return None, None, None, None, None
 
     def calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=5, pixel_per_cm=8.6, ref_x_coor_in_PTimg=362):
         dl_in_pixel = dl_in_cm*pixel_per_cm
@@ -128,60 +143,119 @@ class LandFollower:
         self.controller = Controller
         self.pid_count = 0
         self.robot = Robot
+        self.right_turn_condition = [0] * 30 # This can be adjusted
+        self.right_turn_mode = False
     def Stop(self):
         self.pid_count = 0
         self.robot.left_motor.value  = 0
         self.robot.right_motor.value = 0
+
+
+    # Right turn checker
+    def RightTrakingChecker(self, left_fit):
+        # Remove old data
+        self.right_turn_condition.pop(0)
+        # Add new data
+        if left_fit[0] >= 3e-3:
+            self.right_turn_condition.append(1)
+        else:
+            self.right_turn_condition.append(0)
+        # Check if right turn is needed
+        num_of_condi_meet = sum(self.right_turn_condition)
+        if self.right_turn_condition:
+            if num_of_condi_meet > 15: # To adjust exit right turning mode timing
+                self.right_turn_mode = True
+            else:
+                self.right_turn_mode = False
+        else:
+            if num_of_condi_meet > 25: # To adjust enter right turning mode timing
+                                       # fps = 10, therefore 25 frames means 2.5 secs
+                self.right_turn_mode = True
+            else:
+                self.right_turn_mode = False
+
+    
+    def RecalculateCenter (self, left_fit):
+        # Calculate artificial center line
+        center_fit = left_fit
+        center_fit[2] += 1e2
+        center_line_pts = np.array([[center_fit[0]*y**2 + center_fit[1]*y + center_fit[2], y] for y in range(200,401)], np.int32)
+        return center_line_pts
+    
+
     #------------start--------------------
     def Run(self,perspectiveTransform_img,dt):
         dl_in_cm=15
         binary_img = LandFollower.abs_sobel_thresh(perspectiveTransform_img, thresh_min=35, thresh_max=120)
         binary_img_segment = LandFollower.do_segment(binary_img*255)
         left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts = LandFollower.find_line(binary_img_segment)
-        binary_img_segment_lane_detection = cv2.polylines(binary_img_segment, [center_line_pts], False, (255,0,0), 1)
-        binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
-        binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
-        dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm)
-        # print('dx = ' + str(dx_in_cm) + '  dy = ' + str(dy_in_cm))
-        # cv2.putText(binary_img_segment_lane_detection,'dy = ' + str(dy_in_cm),(20,40),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-        #cv2.imshow("output",UI_perspectiveTransform_img)
-        outputIMG=binary_img_segment_lane_detection_left_right
+        
+        # Check if lane exist
+        if left_fit is not None:
+            binary_img_segment_lane_detection = cv2.polylines(binary_img_segment, [center_line_pts], False, (255,0,0), 1)
+            binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
+            binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
+            
+            # Check if artificial center line needed
+            self.RightTrakingChecker(left_fit)
+            if self.right_turn_mode:
+                center_line_pts = self.RecalculateCenter(left_fit)
 
-        ex = dx_in_cm
-        ey = dy_in_cm
+            dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm)
+            # print('dx = ' + str(dx_in_cm) + '  dy = ' + str(dy_in_cm))
+            # cv2.putText(binary_img_segment_lane_detection,'dy = ' + str(dy_in_cm),(20,40),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+            #cv2.imshow("output",UI_perspectiveTransform_img)
+            outputIMG=binary_img_segment_lane_detection_left_right
 
-        #-------------P I D------------------
-        if self.pid_count == 0:
+            ex = dx_in_cm
+            ey = dy_in_cm
+
+            #-------------P I D------------------
+            if self.pid_count == 0:
+                self.ex_prev = ex
+                self.ey_prev = ey
+                self.pid_count = 1
+            #filter out extreme value
+            if np.abs(ey)>=12:  #7
+                ey=np.sign(ey)*12
+            # Get the feedback
+            (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
+            
+            # Calibrate the motor input acording to current mode (normal of right tracking)
+            if self.right_turn_mode:
+                vot_right = 0
+                if vot_left <= 0.085: #0.07498
+                    vot_left = 0.085
+                elif vot_left >= 0.10:
+                    vot_left = 0.10
+            else:
+                # Apply the min vot
+                if vot_left <= 0.07: #0.07498
+                    vot_left = 0.07
+                elif vot_left >= 0.12:
+                    vot_left = 0.12
+                if vot_right <= 0.065: #0.07234
+                    vot_right = 0.065
+                elif vot_right >0.12:
+                    vot_right = 0.12
+
+            #(vot_left, vot_right) = (0.0,0.0)
+            
+            # update the error
             self.ex_prev = ex
             self.ey_prev = ey
-            self.pid_count = 1
-        #filter out extreme value
-        if np.abs(ey)>=12:  #7
-            ey=np.sign(ey)*12
-        # Get the feedback
-        (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
-        
-        # Apply the min vot
-        if vot_left <= 0.07: #0.07498
-            vot_left = 0.07
-        elif vot_left >= 0.12:
-            vot_left = 0.12
-        if vot_right <= 0.065: #0.07234
-            vot_right = 0.065
-        elif vot_right >0.12:
-            vot_right = 0.12
-        
-        # update the error
-        self.ex_prev = ex
-        self.ey_prev = ey
-        #------------------------------------
-        output=binary_img_segment_lane_detection
-        self.robot.left_motor.value=vot_left
-        self.robot.right_motor.value=vot_right
-        cv2.putText(output,'PID_info: ',(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-        cv2.putText(output,'ex: '+str(ex)+' ey: '+str(ey),(50,80),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-        cv2.putText(output,'vot_lef: '+str(vot_left)+' vot_right: '+str(vot_right),(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-        
-        return outputIMG
+            #------------------------------------
+            output=binary_img_segment_lane_detection
+            self.robot.left_motor.value=vot_left
+            self.robot.right_motor.value=vot_right
+            cv2.putText(output,'PID_info: ',(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+            cv2.putText(output,'ex: '+str(ex)+' ey: '+str(ey),(50,80),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+            cv2.putText(output,'vot_lef: '+str(vot_left)+' vot_right: '+str(vot_right),(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
             
-            
+            return outputIMG
+
+        else:
+            self.robot.left_motor.value=0
+            self.robot.right_motor.value=0
+            print ('lane is not found')
+            return perspectiveTransform_img
