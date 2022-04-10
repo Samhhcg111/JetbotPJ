@@ -59,6 +59,11 @@ class ColorDetector:
         res_green = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=green_mask)
         yellow_mask = cv2.dilate(yellow_mask, kernal)
         res_yellow = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=yellow_mask)
+
+        # Set all lights is False as defualt
+        self.RedLight = False
+        self.GreenLingt = False
+        self.YellowLight = False
         
         #Creating contour to track red color
         red_contours, hierarchy = cv2.findContours(red_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -93,5 +98,6 @@ class ColorDetector:
 
 
         return imageFrame
+
 
 
