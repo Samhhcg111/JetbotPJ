@@ -69,11 +69,11 @@ class Intersesction_Navigator:
         XYZ_front = Intersesction_Navigator.camera2world(rvec,tvec,camera_front_pos)
         direction_vector = np.array([XYZ_front[0][0]-XYZ[0][0],XYZ_front[1][0]-XYZ[1][0]])
         JN_vector = np.array([node[0]-XYZ[0][0],node[1]-XYZ[1][0]])
-        NE_vector = np.array([node[0]-entry[0],node[1]-entry[1]])
+        NE_vector = np.array([entry[0]-node[0],entry[1]-node[1]])
         JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
         JN_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JN_vector)
         NE_distance = Intersesction_Navigator.__distance(NE_vector)
-        NE_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,NE_vector)
+        NE_radians = Intersesction_Navigator.__clockwiseAng(JN_vector,NE_vector)
         # JN_ang = math.degrees(JN_radians)
         # NE_ang = math.degrees(NE_radians)
         # cv2.putText(img,str('Pos: ')+str(XYZ[0:2]),(100,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)

@@ -99,7 +99,7 @@ if camera.isOpened():
                 if Navigator.complete:
                     crosspath = Navigator.crossPath
                     controller.turn(robot,crosspath[0])
-                    controller.go_stright(robot,crosspath[1])
+                    controller.go_stright(robot,crosspath[1]+4) # plus turning radius error
                     controller.turn(robot,crosspath[2])
                     controller.go_stright(robot,crosspath[3])
                     Navigator.Stop()

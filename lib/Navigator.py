@@ -106,7 +106,7 @@ class Navigator:
                 self.count+=1
                 vectors.append([JN_radians,JN_distance,NE_radians,NE_distance])
                 # print('count '+str(self.count))
-            if self.count >20:
+            if self.count >5:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
         return output_img
