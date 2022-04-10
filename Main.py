@@ -79,8 +79,11 @@ if camera.isOpened():
                 outputIMG = LF.Run(perspectiveTransform_img,timedifferent)
 
                 # if detect_STOPLine():
-                #     RF.Stop()
+                #     LF.Stop()
                 #     Stage.nextStage()
+                if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff):
+                    LF.Stop()
+                    Stage.nextStage()
 
             if Stage.isStage2() and not Stop:
                 print('do traffic light task')
@@ -89,7 +92,7 @@ if camera.isOpened():
                 # Red    = CD.RedLight
                 # Green  = CD.GreenLingt
                 # Yellow = CD.YellowLight
-                # Stage.nextStage()
+                Stage.nextStage()
             if Stage.isStage3() and not Stop:
                 # Intersection turn
                 outputIMG=Navigator.Run(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)

@@ -38,6 +38,13 @@ class Intersesction_Navigator:
             print('Not such aruco id : '+str(arucoid))
         return pos_id,pos
 
+    def getCameraPosition(self,frame,mtx,dist,corners,aruco_ids,intersection_id):
+        retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)
+        camera_pos = np.array([[0.],[0.],[0.]])
+        XYZ = Intersesction_Navigator.camera2world(rvec,tvec,camera_pos)
+        posVector = np.array([XYZ[0][0],XYZ[1][0],XYZ[2][0]])
+        return posVector
+        
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int):
         img = frame.copy()
         retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)

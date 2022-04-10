@@ -35,22 +35,6 @@ class Navigator:
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id:int,entry_point:int):
         img,JN_radians,JN_distance,NE_radians,NE_distance = self.IN.navigate(frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point)
         return img,JN_radians,JN_distance,NE_radians,NE_distance
-    def __getEntrtpoint(self,i_pos:int,j_pos:int):
-        k=0
-        for v in self.path:
-            if(v.i==i_pos and v.j==j_pos):
-                break
-            k+=1
-        i=self.path[k+1].i-self.path[k].i
-        j=self.path[k+1].j-self.path[k].j
-        if(i==-1 and j==0):
-            return 0
-        if(i==0 and j==1):
-            return 1
-        if(i==1 and j==0):
-            return 2
-        if(i==0 and j==-1):
-            return 3
     def genPath(self,i0:int,j0:int,i_dest:int,j_dest:int):
         self.path = self.PathfindingMC.getpath(i0,j0,i_dest,j_dest)
     def presentMap(self):
@@ -81,6 +65,7 @@ class Navigator:
     def __distance(self,vector):
         distance = math.sqrt(vector[0]*vector[0]+vector[1]*vector[1])
         return distance
+        
     def __Identify_entry(self,nowPos:np.array,nextPos:np.array):
         direction = nextPos-nowPos
         if direction[0]<0 and int(direction[1]) == 0:
@@ -125,6 +110,29 @@ class Navigator:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
         return output_img
+    def atIntersection(self,src_img,mtx,dist):
+        Critical_distance = 30
+        corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
+        if ids is None:
+            return False
+        else:
+            if len(ids)==1:
+                closeId = ids[0][0]                 
+            else:
+                min_distance = 100
+                for i,id in enumerate(ids):
+                    rvec,tvec,_objpoints = cv2.aruco.estimatePoseSingleMarkers(corners[i],3.8,mtx,dist)
+                    distance = self.__distance(tvec[0][0][0:2])
+                    if distance<min_distance:
+                        min_distance = distance
+                        closeId = id[0]
+            self.intersection_id,pos = self.IN.Indentify_intersection(closeId)
+            Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
+            distance = self.__distance(Pos[0:2])
+            if distance < Critical_distance :
+                return True
+            else:
+                return False
     def Stop(self):
         self.count = 0
         self.complete = False
