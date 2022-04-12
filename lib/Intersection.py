@@ -186,7 +186,13 @@ class Intersection:
             self.entryNodes[3] = (-b2,b2)
         if arucoIds[4] is not None:
             s2=s/2
-            corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]]) 
+            corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
+
+            ### Special case ###
+            #a = # aruco distance
+            # corners.append()
+            ###              ###
+
             self.ids.append([arucoIds[4]])
         self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
         
