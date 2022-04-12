@@ -110,8 +110,8 @@ class Navigator:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
         return output_img
-    def atIntersection(self,src_img,mtx,dist):
-        Critical_distance = 30
+    def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
+        
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
             return False
