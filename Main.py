@@ -74,17 +74,23 @@ if camera.isOpened():
                 # print('do stage 1 task')
                 
                 # Lane following
-                outputIMG = LF.Run(perspectiveTransform_img,timedifferent)
-                stop_line_img = CD.StopLineColorDetector (
-                    perspectiveTransform_img, 
-                    ROI = np.array([    [(263, 250), (263, 399), (430, 399), (430,250)]    ])
-                )
+                outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
+                                   right_turning_mode_time_threshold = 1.1)
+                if LF.right_turn_mode:
+                    #controller.go_stright(robot, 7.5)
+                    controller.turn(robot, np.deg2rad(90))
+                    controller.go_stright(robot, 7.5)
+
 
                 # if detected human:
                     #do human avoidance
                 #else:
 
                 # Stop Line detection
+                stop_line_img = CD.StopLineColorDetector (
+                    perspectiveTransform_img, 
+                    ROI = np.array([    [(263, 250), (263, 399), (430, 399), (430,250)]    ])
+                )
                 if CD.StopLineColor and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):
                     LF.Stop()
                     Stage.nextStage()

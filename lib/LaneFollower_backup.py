@@ -1,4 +1,3 @@
-from matplotlib.pyplot import axis
 import numpy as np
 import cv2
 
@@ -144,7 +143,7 @@ class LandFollower:
         self.controller = Controller
         self.pid_count = 0
         self.robot = Robot
-        self.dt_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
+        self.right_turn_condition = [0] * 30 # This can be adjusted
         self.right_turn_mode = False
     def Stop(self):
         self.pid_count = 0
@@ -153,30 +152,39 @@ class LandFollower:
 
 
     # Right turn checker
-    def RightTrakingChecker(self, left_fit, dt, time_required=3):
+    def RightTrakingChecker(self, left_fit):
         # Remove old data
-        self.dt_and_right_turn_condition = np.delete(self.dt_and_right_turn_condition, 0, axis=0)
+        self.right_turn_condition.pop(0)
         # Add new data
         if left_fit[0] >= 3e-3:
-            self.dt_and_right_turn_condition = np.append(self.dt_and_right_turn_condition, [[dt, 1]], axis=0)
+            self.right_turn_condition.append(1)
         else:
-            self.dt_and_right_turn_condition = np.append(self.dt_and_right_turn_condition, [[dt, 0]], axis=0)
-        # Set right turning mode as false as defarlt
-        self.right_turn_mode = False
+            self.right_turn_condition.append(0)
         # Check if right turn is needed
-        sum_of_time = 0
-        sum_of_condition_meet = 0
-        sum_of_frame = 0
-        for i in range(1,50):
-            [sum_of_time, sum_of_condition_meet] = [sum_of_time, sum_of_condition_meet] + self.dt_and_right_turn_condition[-i]
-            if sum_of_time > time_required:
-                sum_of_frame = i
-                break
-        self.right_turn_mode = (sum_of_condition_meet > 0.9*sum_of_frame)
-        
+        num_of_condi_meet = sum(self.right_turn_condition)
+        if self.right_turn_condition:
+            if num_of_condi_meet > 15: # To adjust exit right turning mode timing
+                self.right_turn_mode = True
+            else:
+                self.right_turn_mode = False
+        else:
+            if num_of_condi_meet > 25: # To adjust enter right turning mode timing
+                                       # fps = 10, therefore 25 frames means 2.5 secs
+                self.right_turn_mode = True
+            else:
+                self.right_turn_mode = False
+
     
+    def RecalculateCenter (self, left_fit):
+        # Calculate artificial center line
+        center_fit = left_fit
+        center_fit[2] += 1e2
+        center_line_pts = np.array([[center_fit[0]*y**2 + center_fit[1]*y + center_fit[2], y] for y in range(200,401)], np.int32)
+        return center_line_pts
+    
+
     #------------start--------------------
-    def Run(self, perspectiveTransform_img, dt, right_turning_mode_time_threshold=3):
+    def Run(self,perspectiveTransform_img,dt):
         dl_in_cm=15
         binary_img = LandFollower.abs_sobel_thresh(perspectiveTransform_img, thresh_min=35, thresh_max=120)
         binary_img_segment = LandFollower.do_segment(binary_img*255)
@@ -188,14 +196,15 @@ class LandFollower:
             binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
             binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
             
-            # Check if entering right turning mode is needed
-            self.RightTrakingChecker(left_fit, dt, time_required=right_turning_mode_time_threshold)
+            # Check if artificial center line needed
+            self.RightTrakingChecker(left_fit)
             if self.right_turn_mode:
-                self.dt_and_right_turn_condition = np.zeros((50,2)) # reset
-                return binary_img_segment
+                center_line_pts = self.RecalculateCenter(left_fit)
 
             dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm)
-
+            # print('dx = ' + str(dx_in_cm) + '  dy = ' + str(dy_in_cm))
+            # cv2.putText(binary_img_segment_lane_detection,'dy = ' + str(dy_in_cm),(20,40),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+            #cv2.imshow("output",UI_perspectiveTransform_img)
             outputIMG=binary_img_segment_lane_detection_left_right
 
             ex = dx_in_cm
@@ -211,16 +220,24 @@ class LandFollower:
                 ey=np.sign(ey)*12
             # Get the feedback
             (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
-
-            # Apply the min vot
-            if vot_left <= 0.07: #0.07498
-                vot_left = 0.07
-            elif vot_left >= 0.12:
-                vot_left = 0.12
-            if vot_right <= 0.065: #0.07234
-                vot_right = 0.065
-            elif vot_right >0.12:
-                vot_right = 0.12
+            
+            # Calibrate the motor input acording to current mode (normal of right tracking)
+            if self.right_turn_mode:
+                vot_right = 0
+                if vot_left <= 0.085: #0.07498
+                    vot_left = 0.085
+                elif vot_left >= 0.10:
+                    vot_left = 0.10
+            else:
+                # Apply the min vot
+                if vot_left <= 0.07: #0.07498
+                    vot_left = 0.07
+                elif vot_left >= 0.12:
+                    vot_left = 0.12
+                if vot_right <= 0.065: #0.07234
+                    vot_right = 0.065
+                elif vot_right >0.12:
+                    vot_right = 0.12
 
             #(vot_left, vot_right) = (0.0,0.0)
             
