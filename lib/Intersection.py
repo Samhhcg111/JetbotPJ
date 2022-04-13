@@ -18,13 +18,13 @@ class Intersesction_Navigator:
 
             ####test####
             if (i == 1):
-                section = Intersection(i,np.array([1,2,3,None,None]),(2,1))
+                section = Intersection(i,np.array([1,2,3,None]),(2,1))
             if (i == 2):
-                section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
+                section = Intersection(i,np.array([5,None,7,8]),(2,3))
             if (i == 3):
-                section = Intersection(i,np.array([9,10,None,12,None]),(4,3))
-            if section is not None:
+                section = Intersection(i,np.array([9,10,None,12]),(4,3))
             ############
+            if section is not None:
                 self.__intersections[i]=section
                 
     def Indentify_intersection(self,arucoid):
@@ -184,15 +184,16 @@ class Intersection:
             self.ids.append([arucoIds[3]])
             self.entries[3] = (-b,b2)
             self.entryNodes[3] = (-b2,b2)
-        if arucoIds[4] is not None:
-            s2=s/2
-            corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
-
-            ### Special case ###
-            #a = # aruco distance
-            # corners.append()
-            ###              ###
-
-            self.ids.append([arucoIds[4]])
+        if len(arucoIds)>4:
+            if arucoIds[4] is not None:
+                s2=s/2
+                corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
+                self.ids.append([arucoIds[4]])
+        ### Special case ###
+        # if len(arucoIds)>5:
+            # if arucoIds[5] is not None:
+                #a = # aruco distance
+                # corners.append()
+                # self.ids.append([arucoIds[5]])
         self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
         
