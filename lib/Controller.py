@@ -29,9 +29,9 @@ class Controller:
         b_R = -2.1796 # right wheel intercept
         ## Car Matrixes ##
         self.M = np.array([[r/2, r/2], [-r/l, r/l]])
-        C = np.array([[C_L, 0], [0, C_R]])
+        self.C = np.array([[C_L, 0], [0, C_R]])
         self.B = np.array([[b_L], [b_R]])
-        MC = (self.M.dot(C))
+        MC = (self.M.dot(self.C))
         self.MC_inv = np.linalg.inv(MC)
 
     def get_feedback(self, ex, ex_prev, ey, ey_prev, dt):
