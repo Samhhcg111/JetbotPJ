@@ -75,11 +75,13 @@ if camera.isOpened():
                 
                 # Lane following
                 outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
-                                   right_turning_mode_time_threshold = 1.1)
+                                   right_turning_mode_distance_threshold = 15)
                 if LF.right_turn_mode:
-                    #controller.go_stright(robot, 7.5)
-                    controller.turn(robot, np.deg2rad(90))
+                    LF.Stop()
+                    controller.go_stright(robot, 12)
+                    controller.turn(robot, np.deg2rad(85))
                     controller.go_stright(robot, 7.5)
+                    LF.right_turn_mode = False
 
 
                 # if detected human:
