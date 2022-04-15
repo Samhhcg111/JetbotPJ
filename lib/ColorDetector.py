@@ -3,15 +3,18 @@ import cv2
 
 class ColorDetector:    
 
-    def do_segment(frame):
+    def do_segment (
+        frame,
+        polygons = np.array([   # Creates a triangular polygon for the mask defined by three (x, y) coordinates
+                                [(0, 0), (290, 0), (290, 434), (0, 434)]
+                            ])
+        ):
+
             # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
             # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
             height = frame.shape[0]
             width = frame.shape[1]
-            # Creates a triangular polygon for the mask defined by three (x, y) coordinates
-            polygons = np.array([
-                                    [(0, 0), (290, 0), (290, 434), (0, 434)]
-                                ])
+
             # Creates an image filled with zero intensities with the same dimensions as the frame
             mask = np.zeros_like(frame)
             # Allows the mask to be filled with values of 1 and the other areas to be filled with values of 0
@@ -26,11 +29,13 @@ class ColorDetector:
         self.RedLight = False
         self.GreenLingt = False
         self.YellowLight = False
+        self.StopLineColor = False
     
 
     def TrafficLightDetector (
         self,
         imageFrame,
+        ROI = np.array([   [(0, 0), (290, 0), (290, 434), (0, 434)]   ]),
         red_lower = np.array([160, 60, 180], np.uint8),  # 136, 87, 111
         red_upper = np.array([180, 110, 255], np.uint8), # 180, 255, 255
         red_area_lower_limit = 300,
@@ -43,7 +48,7 @@ class ColorDetector:
     ):
 
         # Input image
-        segmentedFrame = ColorDetector.do_segment(imageFrame) 
+        segmentedFrame = ColorDetector.do_segment(imageFrame, polygons=ROI) 
         hsvFrame = cv2.cvtColor(segmentedFrame, cv2.COLOR_BGR2HSV)
 
         # Define mask
@@ -98,6 +103,45 @@ class ColorDetector:
 
 
         return imageFrame
+
+    
+    def StopLineColorDetector (
+        self,
+        imageFrame,
+        ROI = np.array([    [(210, 250), (210, 342), (263, 399), (430, 399), (500,305), (500, 250)]    ]),
+        stop_line_color_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
+        stop_line_color_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
+        area_lower_limit = 1500,
+    ):
+        # Input image
+        segmentedFrame = ColorDetector.do_segment(imageFrame, polygons=ROI) 
+        hsvFrame = cv2.cvtColor(segmentedFrame, cv2.COLOR_BGR2HSV)
+
+        # Define mask
+        mask = cv2.inRange(hsvFrame, stop_line_color_lower, stop_line_color_upper)
+
+        # Morphological Transform, Dilation for each color and bitwise and operator between image frame and mask determine to detect only that particular color.
+        kernal = np.ones((5,5), "uint8")
+        mask = cv2.dilate(mask, kernal)
+        res = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=mask)
+
+        # Set stop line False as defualt
+        self.StopLineColor = False
+
+        #Creating contour to track red color
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        for pic, contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+            if area > area_lower_limit:
+                x, y, w, h = cv2.boundingRect(contour)
+                imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
+                cv2.putText(imageFrame, "Stop line", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
+                self.StopLineColor = True
+
+        return imageFrame
+
+
+
 
 
 

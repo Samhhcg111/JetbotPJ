@@ -49,7 +49,7 @@ if camera.isOpened():
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,1,4,5)
     CD = ColorDetector()
-    Stage.setStage(3)
+    Stage.setStage(1)
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
         start_time=time.time()
@@ -72,27 +72,43 @@ if camera.isOpened():
                 
             if Stage.isStage1() and not Stop:
                 # print('do stage 1 task')
+                
                 # Lane following
+                outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
+                                   right_turning_mode_distance_threshold = 15)
+                if LF.right_turn_mode:
+                    LF.Stop()
+                    controller.go_stright(robot, 12)
+                    controller.turn(robot, np.deg2rad(85))
+                    controller.go_stright(robot, 7.5)
+                    LF.right_turn_mode = False
+
+
                 # if detected human:
                     #do human avoidance
                 #else:
-                outputIMG = LF.Run(perspectiveTransform_img,timedifferent)
 
-                # if detect_STOPLine():
-                #     LF.Stop()
-                #     Stage.nextStage()
-                if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff):
+                # Stop Line detection
+                stop_line_img = CD.StopLineColorDetector (
+                    perspectiveTransform_img, 
+                    ROI = np.array([    [(263, 250), (263, 399), (430, 399), (430,250)]    ])
+                )
+                if CD.StopLineColor and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):
                     LF.Stop()
                     Stage.nextStage()
 
+                #outputIMG = img
+
             if Stage.isStage2() and not Stop:
                 print('do traffic light task')
-                # Traffic Light
+                # Traffic Light detection
                 # Traffic_light_marked_img = CD.TrafficLightDetector(img)
                 # Red    = CD.RedLight
                 # Green  = CD.GreenLingt
                 # Yellow = CD.YellowLight
-                Stage.nextStage()
+                # if Green and not Red:
+                #     Stage.nextStage()
+
             if Stage.isStage3() and not Stop:
                 # Intersection turn
                 outputIMG=Navigator.Run(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
