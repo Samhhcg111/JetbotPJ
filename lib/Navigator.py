@@ -32,6 +32,7 @@ class Navigator:
         self.count = 0
         self.complete = False
         self.crossPath = None
+        self.errCount=0
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id:int,entry_point:int):
         img,JN_radians,JN_distance,NE_radians,NE_distance = self.IN.navigate(frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point)
         return img,JN_radians,JN_distance,NE_radians,NE_distance
@@ -109,6 +110,8 @@ class Navigator:
             if self.count >5:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
+        else:
+            self.errCount+=1
         return output_img
     def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         
@@ -133,8 +136,15 @@ class Navigator:
                 return True
             else:
                 return False
+                
+    def TooManyErr(self,no_id_count):
+        if self.errCount>no_id_count:
+            return True
+        return False
+
     def Stop(self):
         self.count = 0
         self.complete = False
         self.crossPath = None
+        self.errCount = 0
     
