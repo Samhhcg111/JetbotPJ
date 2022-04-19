@@ -1,7 +1,4 @@
-from re import U
-from tkinter.messagebox import NO
 import cv2
-from cv2 import inRange
 import numpy as np
 class MyCam:
 
