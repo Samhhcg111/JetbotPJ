@@ -115,7 +115,7 @@ class LandFollower:
             left_fit = np.polyfit(lefty, leftx, 2)
             right_fit = np.polyfit(righty, rightx, 2)
 
-            print('left: ', left_fit)
+            # print('left: ', left_fit)
             #print('\nright: ', right_fit)
 
             # Create points in lines for plot
@@ -186,7 +186,7 @@ class LandFollower:
                 break
         if sum_of_frame>8:
             self.right_turn_mode = (sum_of_condition_meet > 0.8*sum_of_frame)
-        print(sum_of_frame)
+        # print(sum_of_frame)
         
     
     #------------start--------------------

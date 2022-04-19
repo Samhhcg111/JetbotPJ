@@ -18,7 +18,7 @@ class Intersesction_Navigator:
 
             ####test####
             if (i == 1):
-                section = Intersection(i,np.array([1,2,3,None]),(2,1))
+                section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
             if (i == 2):
                 section = Intersection(i,np.array([5,None,7,8]),(2,3))
             if (i == 3):
@@ -56,7 +56,8 @@ class Intersesction_Navigator:
                 objpt = np.array([[en_x,en_y,0]])
                 imgpt,jacobian = cv2.projectPoints(objpt,rvec,tvec,mtx,dist)
                 u,v=imgpt[0][0]
-                cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
+                if u>0 and v >0 and u <img.shape[1] and v<img.shape[0]:
+                    cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
 
         ### calculate path vectors
         entry =self.__intersections[intersection_id].entries[entry_point]
@@ -190,10 +191,10 @@ class Intersection:
                 corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
                 self.ids.append([arucoIds[4]])
         ### Special case ###
-        # if len(arucoIds)>5:
-            # if arucoIds[5] is not None:
-                #a = # aruco distance
-                # corners.append()
-                # self.ids.append([arucoIds[5]])
+        if len(arucoIds)>5:
+            if arucoIds[5] is not None:
+                a = 21# aruco distance
+                corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) #test
+                self.ids.append([arucoIds[5]])
         self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
         

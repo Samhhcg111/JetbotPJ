@@ -93,21 +93,24 @@ if camera.isOpened():
                     perspectiveTransform_img, 
                     ROI = np.array([    [(263, 250), (263, 399), (430, 399), (430,250)]    ])
                 )
-                if CD.StopLineColor and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):
+                if CD.StopLineColor:
+                # if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff,30):
                     LF.Stop()
+                    # controller.turn(robot,np.deg2rad(10))
                     Stage.nextStage()
 
-                #outputIMG = img
+                # outputIMG = stop_line_img
 
             if Stage.isStage2() and not Stop:
                 print('do traffic light task')
                 # Traffic Light detection
-                # Traffic_light_marked_img = CD.TrafficLightDetector(img)
-                # Red    = CD.RedLight
-                # Green  = CD.GreenLingt
-                # Yellow = CD.YellowLight
-                # if Green and not Red:
-                #     Stage.nextStage()
+                Traffic_light_marked_img = CD.TrafficLightDetector(img)
+                Red    = CD.RedLight
+                Green  = CD.GreenLingt
+                Yellow = CD.YellowLight
+                if Green and not Red:
+                    Stage.nextStage()
+                outputIMG = Traffic_light_marked_img
 
             if Stage.isStage3() and not Stop:
                 # Intersection turn
@@ -120,6 +123,8 @@ if camera.isOpened():
                     controller.go_stright(robot,crosspath[3])
                     Navigator.Stop()
                     Stage.nextStage()
+                if Navigator.TooManyErr(10):
+                    controller.turn(robot,np.deg2rad(10))
 
             # if Stop :
                 # LF.Stop()

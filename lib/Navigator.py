@@ -82,6 +82,7 @@ class Navigator:
         output_img = src_img.copy()
         vectors = []
         if ids is not None:
+            self.errCount = 0
             if self.count ==0:
                 if len(ids)==1:
                     closeId = ids[0][0]                 
@@ -136,7 +137,7 @@ class Navigator:
                 return True
             else:
                 return False
-                
+
     def TooManyErr(self,no_id_count):
         if self.errCount>no_id_count:
             return True
