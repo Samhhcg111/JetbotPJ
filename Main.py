@@ -162,7 +162,6 @@ if camera.isOpened():
         # space capture img
         if keyCode%256 == 32:
             Mycam.takepicture(undistort_img)
-            print('Chese')
         #--------------------------------------------------------------------
         end_time=time.time()
         timedifferent=end_time-start_time

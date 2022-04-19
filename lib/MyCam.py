@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
+import os 
 class MyCam:
-
+    img_saveDIR = './imgCapture'
     calibrationFile_path='calibration.npz'
     camera_matrix=None
     dist_coeff=None
@@ -11,6 +12,9 @@ class MyCam:
     img_number=0
     #------Load calibration configuration--------
     def __init__(self,calibrationFile_path):
+        if not os.path.isdir(self.img_saveDIR):
+            print('no imgCapture directory is found, create directory')
+            os.mkdir(self.img_saveDIR)
         if calibrationFile_path is None:
             self.calibrationFile_path='calibration.npz'
         else:
@@ -88,9 +92,11 @@ class MyCam:
         cv2.line(lines_visualize,corner_list[2],corner_list[3],frame_color,1)
         return lines_visualize
     def takepicture(self,img):
-        img_name='./undistortimg'+str(self.img_number)+'.jpg'
+        img_name='/Capture'+str(self.img_number)+'.jpg'
         self.img_number+=1
-        cv2.imwrite(img_name,img)
+        savePath = self.img_saveDIR+img_name
+        cv2.imwrite(savePath,img)
+        print("[MyCam] save img at : "+str(savePath))
     def drawline(frame,u0:int,v0:int,u1:int,v1:int,color,thickness:int):
         img  = frame.copy()
         rows,cols = img.shape[:2]
