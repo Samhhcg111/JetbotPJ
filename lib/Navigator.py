@@ -32,10 +32,7 @@ class Navigator:
         self.count = 0
         self.complete = False
         self.crossPath = None
-        self.errCount=0
-    def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id:int,entry_point:int):
-        img,JN_radians,JN_distance,NE_radians,NE_distance = self.IN.navigate(frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point)
-        return img,JN_radians,JN_distance,NE_radians,NE_distance
+        # self.ArucoParam = cv2.aruco.DetectorParameters_create()
     def genPath(self,i0:int,j0:int,i_dest:int,j_dest:int):
         self.path = self.PathfindingMC.getpath(i0,j0,i_dest,j_dest)
     def presentMap(self):
@@ -79,10 +76,10 @@ class Navigator:
             return 3 
     def Run(self,Global_DET:GlobalPosDET,src_img,mtx,dist):
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
+        # corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary,parameters=self.ArucoParam)
         output_img = src_img.copy()
         vectors = []
         if ids is not None:
-            self.errCount = 0
             if self.count ==0:
                 if len(ids)==1:
                     closeId = ids[0][0]                 
@@ -94,28 +91,27 @@ class Navigator:
                         if distance<min_distance:
                             min_distance = distance
                             closeId = ids[i][0]
-                self.intersection_id,pos = self.IN.Indentify_intersection(closeId)
+                self.intersection_id,pos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
                 Global_DET.setPos(pos[0],pos[1])
                 self.genPath(pos[0],pos[1],self.goalGlobalPos[0],self.goalGlobalPos[1])
                 nextPos = self.path[1]
                 self.entry = self.__Identify_entry(np.array([pos[0],pos[1]]),np.array([nextPos.i,nextPos.j]))
-                print('go entry point : '+str(self.entry))
+                # print('go entry point : '+str(self.entry))
                 self.count+=1
                 # print('Debug1')
+                
             if self.count>0:
-                output_img,JN_radians,JN_distance,NE_radians,NE_distance = self.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry)
-                # output_img,JN_radians,JN_distance,NE_radians,NE_distance = self.navigate(src_img,mtx,dist,corners,ids,2,3) #NoteBook Test
+                # self.now_entry_point = 2 #NoteBook Test
+                output_img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance = self.IN.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry,self.now_entry_point)
+                # output_img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance = self.IN.navigate(src_img,mtx,dist,corners,ids,2,3,2) #NoteBook Test
                 self.count+=1
-                vectors.append([JN_radians,JN_distance,NE_radians,NE_distance])
+                vectors.append([JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance])
                 # print('count '+str(self.count))
             if self.count >5:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
-        else:
-            self.errCount+=1
         return output_img
     def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
-        
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
             return False
@@ -130,22 +126,15 @@ class Navigator:
                     if distance<min_distance:
                         min_distance = distance
                         closeId = id[0]
-            self.intersection_id,pos = self.IN.Indentify_intersection(closeId)
+            self.intersection_id,pos,now_entry_point = self.IN.Indentify_intersection(closeId)
             Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
             distance = self.__distance(Pos[0:2])
             if distance < Critical_distance :
                 return True
             else:
                 return False
-
-    def TooManyErr(self,no_id_count):
-        if self.errCount>no_id_count:
-            return True
-        return False
-
     def Stop(self):
         self.count = 0
         self.complete = False
         self.crossPath = None
-        self.errCount = 0
     

@@ -5,7 +5,6 @@ import math
 from lib.MyCam import MyCam
 class Intersesction_Navigator:
     __intersections={}
-    __intersection_size=np.array([15,15])
     def __init__(self):
         self.__intersections={}
         for i in range(1,4,1): #test
@@ -18,11 +17,11 @@ class Intersesction_Navigator:
 
             ####test####
             if (i == 1):
-                section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
+                section = Intersection(i,np.array([1,2,3,None,None]),(2,1))
             if (i == 2):
-                section = Intersection(i,np.array([5,None,7,8]),(2,3))
+                section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
             if (i == 3):
-                section = Intersection(i,np.array([9,10,None,12]),(4,3))
+                section = Intersection(i,np.array([9,10,None,12,None]),(4,3))
             ############
             if section is not None:
                 self.__intersections[i]=section
@@ -30,13 +29,14 @@ class Intersesction_Navigator:
     def Indentify_intersection(self,arucoid):
         pos_id = None
         for Intersection_id in self.__intersections:
-            for id in self.__intersections[Intersection_id].ids:
+            for i,id in enumerate(self.__intersections[Intersection_id].ids): 
                 if id[0] == arucoid:
                     pos_id = self.__intersections[Intersection_id].id
                     pos = self.__intersections[Intersection_id].pos
+                    now_entry_point = i
         if pos_id is None:
             print('Not such aruco id : '+str(arucoid))
-        return pos_id,pos
+        return pos_id,pos,now_entry_point
 
     def getCameraPosition(self,frame,mtx,dist,corners,aruco_ids,intersection_id):
         retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)
@@ -45,7 +45,7 @@ class Intersesction_Navigator:
         posVector = np.array([XYZ[0][0],XYZ[1][0],XYZ[2][0]])
         return posVector
         
-    def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int):
+    def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int,now_entry_point:int):
         img = frame.copy()
         retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)
         
@@ -56,12 +56,11 @@ class Intersesction_Navigator:
                 objpt = np.array([[en_x,en_y,0]])
                 imgpt,jacobian = cv2.projectPoints(objpt,rvec,tvec,mtx,dist)
                 u,v=imgpt[0][0]
-                if u>0 and v >0 and u <img.shape[1] and v<img.shape[0]:
-                    cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
-
+                cv2.circle(img,(int(u),int(v)),5,(255,0,255),2)
         ### calculate path vectors
         entry =self.__intersections[intersection_id].entries[entry_point]
         node = self.__intersections[intersection_id].entryNodes[entry_point]
+        stopPt =self.__intersections[intersection_id].stopPoint[now_entry_point]
         camera_pos = np.array([[0.],[0.],[0.]])
         # XYZ  = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_pos)
         XYZ = Intersesction_Navigator.camera2world(rvec,tvec,camera_pos)
@@ -69,12 +68,15 @@ class Intersesction_Navigator:
         # XYZ_front = Intersesction_Navigator.jetbot2world(rvec,tvec,camera_front_pos)
         XYZ_front = Intersesction_Navigator.camera2world(rvec,tvec,camera_front_pos)
         direction_vector = np.array([XYZ_front[0][0]-XYZ[0][0],XYZ_front[1][0]-XYZ[1][0]])
-        JN_vector = np.array([node[0]-XYZ[0][0],node[1]-XYZ[1][0]])
+        JS_vector = np.array([stopPt[0]-XYZ[0][0],stopPt[1]-XYZ[1][0]])
+        SN_vector = np.array([node[0]-stopPt[0],node[1]-stopPt[1]])
         NE_vector = np.array([entry[0]-node[0],entry[1]-node[1]])
-        JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
-        JN_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JN_vector)
+        JS_distance = Intersesction_Navigator.__distance(JS_vector)+2 # offset to jetbot pos if usiing camera pos
+        JS_radians = Intersesction_Navigator.__clockwiseAng(direction_vector,JS_vector)
+        SN_distance = Intersesction_Navigator.__distance(SN_vector)
+        SN_radians = Intersesction_Navigator.__clockwiseAng(JS_vector,SN_vector)
         NE_distance = Intersesction_Navigator.__distance(NE_vector)
-        NE_radians = Intersesction_Navigator.__clockwiseAng(JN_vector,NE_vector)
+        NE_radians = Intersesction_Navigator.__clockwiseAng(SN_vector,NE_vector)
         # JN_ang = math.degrees(JN_radians)
         # NE_ang = math.degrees(NE_radians)
         # cv2.putText(img,str('Pos: ')+str(XYZ[0:2]),(100,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
@@ -82,21 +84,29 @@ class Intersesction_Navigator:
         # print('and Turn '+str(OE_ang)+' go '+str(OE_distance))
 
         ### Visualize path
+        #Jetbot
         self_objpt = np.array([[XYZ[0][0],XYZ[1][0],0]])
         imgpt,jacobian = cv2.projectPoints(self_objpt,rvec,tvec,mtx,dist)
         u0,v0=imgpt[0][0]
         if u0>0 and v0 >0 and u0 <img.shape[1] and v0<img.shape[0]:
             cv2.circle(img,(int(u0),int(v0)),5,(0,0,255),2)
-        Node_objpt = np.array([[node[0],node[1],0.]])
-        imgpt,jacobian = cv2.projectPoints(Node_objpt,rvec,tvec,mtx,dist)
+        #Stop point
+        stopPt_objpt = np.array([[stopPt[0],stopPt[1],0.]])
+        imgpt,jacobian = cv2.projectPoints(stopPt_objpt,rvec,tvec,mtx,dist)
         u1,v1=imgpt[0][0]
         img = MyCam.drawline(img,int(u0),int(v0),int(u1),int(v1),(0,255,0),2)
+        #Node waypoint
+        Node_objpt = np.array([[node[0],node[1],0.]])
+        imgpt,jacobian = cv2.projectPoints(Node_objpt,rvec,tvec,mtx,dist)
+        u2,v2=imgpt[0][0]
+        img = MyCam.drawline(img,int(u1),int(v1),int(u2),int(v2),(0,255,0),2)
+        #Entry point
         E_objpt = np.array([[entry[0],entry[1],0]])
         imgpt,jacobian = cv2.projectPoints(E_objpt,rvec,tvec,mtx,dist)
         u3,v3=imgpt[0][0]
-        img = MyCam.drawline(img,int(u1),int(v1),int(u3),int(v3),(0,255,0),2)
+        img = MyCam.drawline(img,int(u2),int(v2),int(u3),int(v3),(0,255,0),2)
         cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
-        return img,JN_radians,JN_distance,NE_radians,NE_distance
+        return img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance
 
     def camera2world(rvec:np.array,tvec:np.array,objpt:np.array):
         objpt = np.r_[objpt,[[1]]]
@@ -149,6 +159,7 @@ class Intersection:
     aruco_distance = 18 #test
     # intersection_size = 15 # NoteBook Test
     intersection_size = 15.5*2 #test
+    stop_distance = 10
     def __init__(self,id:int,arucoIds:np.array,pos):
         self.id=id
         self.pos = [pos[0],pos[1]]
@@ -161,6 +172,8 @@ class Intersection:
         b2 = self.intersection_size/4
         c = self.aruco_high
         s = self.aruco_size
+        stopD = self.stop_distance
+        self.stopPoint = [(-b2,b+stopD),(b+stopD,b2),(b2,-b-stopD),(-b-stopD,-b2)]
         if arucoIds[0] is not None:
             corners.append([[-b+s,a,0],[-b,a,0],[-b,a+s,0],[-b+s,a+s,0]]) #test
             # corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) # NoteBook Test
@@ -191,10 +204,11 @@ class Intersection:
                 corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
                 self.ids.append([arucoIds[4]])
         ### Special case ###
-        if len(arucoIds)>5:
-            if arucoIds[5] is not None:
-                a = 21# aruco distance
-                corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) #test
-                self.ids.append([arucoIds[5]])
+        # if len(arucoIds)>5:
+            # if arucoIds[5] is not None:
+                #a = # aruco distance
+                # corners.append()
+                # self.ids.append([arucoIds[5]])
+                
         self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
         
