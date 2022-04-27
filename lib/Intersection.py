@@ -45,6 +45,84 @@ class Intersesction_Navigator:
         posVector = np.array([XYZ[0][0],XYZ[1][0],XYZ[2][0]])
         return posVector
         
+    def __getCorrectPosfromStopLine(perspectiveImg,StopLineMask,now_entry_point:int,RedlineLength):
+        mask = StopLineMask.copy()
+        output = perspectiveImg.copy()
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            if cv2.contourArea(contour)>10000:
+                rect = cv2.minAreaRect(contour)
+                box = cv2.boxPoints(rect)
+                box = np.int0(box)
+                cv2.drawContours(output,[box],0,(0,0,255),2)
+                vec0 = [box[1][0]-box[0][0],box[1][1]-box[0][1]]
+                vec1 = [box[3][0]-box[0][0],box[3][1]-box[0][1]]
+                #find long edge as reference x-axis
+                if math.sqrt(vec0[0]*vec0[0]+vec0[1]*vec0[1])<math.sqrt(vec1[0]*vec1[0]+vec1[1]*vec1[1]):
+                    # avg = np.average(np.array([box[1][:],box[0][:]]),axis=0)
+                    ref_vec = vec1
+                    origin = box[1]
+                    linelong = Intersesction_Navigator.__distance(ref_vec)
+                else:
+                    # avg = np.average(np.array([box[3][:],box[0][:]]),axis=0)
+                    ref_vec = vec0
+                    origin = box[0]
+                    linelong = Intersesction_Navigator.__distance(ref_vec)
+                # avg = np.int0(avg)
+                # origin = avg
+                cv2.line(output,(int(output.shape[1]/2),int(output.shape[0])),origin[:],(0,255,0),2)
+                vec = np.array([mask.shape[1]/2-origin[0],mask.shape[0]-origin[1]])
+                distance = Intersesction_Navigator.__distance(vec)/linelong*RedlineLength
+                radians = Intersesction_Navigator.__clockwiseAng(ref_vec,vec)
+                # cv2.putText(img,str(math.degrees(radians)),(80,120),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
+                x = distance*math.cos(radians)
+                y = distance*math.sin(radians)
+                posvec = [x,y]
+                cv2.putText(output,str(posvec),(80,150),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
+                dir_vec = np.array([0,-1])
+                direction_radian = Intersesction_Navigator.__clockwiseAng(ref_vec,dir_vec)
+                dx = math.cos(direction_radian)
+                dy = math.sin(direction_radian)
+                dir_vec = [dx,dy]
+                cv2.putText(output,str(dir_vec),(80,100),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
+                s = Intersection.intersection_size/4
+                def R(radian):
+                    return np.mat([[math.cos(radian),-math.sin(radian)],[math.sin(radian),math.cos(radian)]])
+                if now_entry_point == 0:
+                    turn = -2*np.pi
+                    correct_vec = R(turn)*np.mat(posvec)
+                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_dir_vec = R(turn)*np.mat(dir_vec)
+                elif now_entry_point == 1:
+                    turn = np.pi/2
+                    correct_vec = R(turn)*np.mat(posvec)
+                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_dir_vec = R(turn)*np.mat(dir_vec)
+                elif now_entry_point == 2:
+                    correct_vec = np.mat(posvec)
+                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_dir_vec = np.mat(dir_vec)
+                elif now_entry_point == 3:
+                    turn = -np.pi/2
+                    correct_vec = R(turn)*np.mat(posvec)
+                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_dir_vec = R(turn)*np.mat(dir_vec)
+                correct_vec = [correct_vec[0][0],correct_vec[0][1]]
+                correct_dir_vec = [correct_dir_vec[0][0],correct_dir_vec[0][1]]
+        return output,correct_vec,correct_dir_vec
+
+    def stopLine_navigate(self,StopLineMask,intersection_id,entry_point:int,now_entry_point:int):
+        output,posvec,dir_vec = Intersesction_Navigator.__getCorrectPosfromStopLine(StopLineMask,now_entry_point,10)
+        entry =self.__intersections[intersection_id].entries[entry_point]
+        node = self.__intersections[intersection_id].entryNodes[entry_point]
+        JN_vector = np.array([node[0]-posvec[0],node[1]-posvec[1]])
+        NE_vector = np.array([entry[0]-node[0],entry[1]-node[1]])
+        JN_distance = Intersesction_Navigator.__distance(JN_vector)+2 # offset to jetbot pos if usiing camera pos
+        JN_radians = Intersesction_Navigator.__clockwiseAng(dir_vec,JN_vector)
+        NE_distance = Intersesction_Navigator.__distance(NE_vector)
+        NE_radians = Intersesction_Navigator.__clockwiseAng(JN_vector,NE_vector)
+        return JN_distance,JN_radians,NE_radians,NE_distance
+
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int,now_entry_point:int):
         img = frame.copy()
         retval,rvec,tvec = cv2.aruco.estimatePoseBoard(corners,aruco_ids,self.__intersections[intersection_id].aruco_board,mtx,dist,None,None)
