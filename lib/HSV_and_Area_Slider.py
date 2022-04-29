@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 class HSV_and_Area_Setting:
 
@@ -12,7 +13,11 @@ class HSV_and_Area_Setting:
         self.Area = 0
 
 
-    def slider(self, window_name):
+    def slider (
+        self, 
+        window_name,
+        init_value = np.array([59, 94, 45, 141, 95, 213, 300])
+        ):
 
         def update(x):
             self.H_min = cv2.getTrackbarPos('H_min', window_name)
@@ -31,10 +36,10 @@ class HSV_and_Area_Setting:
         cv2.createTrackbar('V_max',window_name,0,255,update)
         cv2.createTrackbar('Area',window_name,0,3000,update)
 
-        cv2.setTrackbarPos('H_min',window_name,0)
-        cv2.setTrackbarPos('H_max',window_name,180)
-        cv2.setTrackbarPos('S_min',window_name,0)
-        cv2.setTrackbarPos('S_max',window_name,255)
-        cv2.setTrackbarPos('V_min',window_name,0)
-        cv2.setTrackbarPos('V_max',window_name,255)
-        cv2.setTrackbarPos('Area',window_name,300)
+        cv2.setTrackbarPos('H_min',window_name,init_value[0])
+        cv2.setTrackbarPos('H_max',window_name,init_value[1])
+        cv2.setTrackbarPos('S_min',window_name,init_value[2])
+        cv2.setTrackbarPos('S_max',window_name,init_value[3])
+        cv2.setTrackbarPos('V_min',window_name,init_value[4])
+        cv2.setTrackbarPos('V_max',window_name,init_value[5])
+        cv2.setTrackbarPos('Area',window_name,init_value[6])
