@@ -107,12 +107,13 @@ class ColorDetector:
     
     def StopLineColorDetector (
         self,
-        imageFrame,
+        image,
         ROI = np.array([    [(210, 250), (210, 342), (263, 399), (430, 399), (500,305), (500, 250)]    ]),
         stop_line_color_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
         stop_line_color_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
         area_lower_limit = 1500,
     ):
+        imageFrame = image.copy()
         # Input image
         segmentedFrame = ColorDetector.do_segment(imageFrame, polygons=ROI) 
         hsvFrame = cv2.cvtColor(segmentedFrame, cv2.COLOR_BGR2HSV)
@@ -138,7 +139,7 @@ class ColorDetector:
                 cv2.putText(imageFrame, "Stop line", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
                 self.StopLineColor = True
 
-        return imageFrame
+        return imageFrame,mask
 
 
 
