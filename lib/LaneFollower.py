@@ -12,7 +12,7 @@ class LandFollower:
         width = frame.shape[1]
         # Creates a triangular polygon for the mask defined by three (x, y) coordinates
         polygons = np.array([
-                                [(40, 148), (534, 84), (534, 168), (430, 399), (263,399)]
+                                [(182, 400), (390, 400), (600, 165), (600, 0), (0,0)]
                             ])
         # Creates an image filled with zero intensities with the same dimensions as the frame
         mask = np.zeros_like(frame)
@@ -38,18 +38,23 @@ class LandFollower:
 
         return binary_output
 
-    def find_line(binary_warped):
+    def find_line(
+        binary_warped, 
+        midpoint = 300, # The x axis of the jetbot
+        nwindows = 9, # Choose the number of sliding windows
+        margin = 50, # Set the width of the windows +/- margin
+        minpix = 30  # Create empty lists to receive left and right lane pixel indices
+        ):
+
         # Take a histogram of the bottom half of the image
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
         # Find the peak of the left and right halves of the histogram
         # These will be the starting point for the left and right lines
         #midpoint = np.int(histogram.shape[0]/2)
-        midpoint = 362
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-        # Choose the number of sliding windows
-        nwindows = 9
+        
         # Set height of windows
         window_height = np.int((binary_warped.shape[0]-202)/(nwindows))   #only use the bottom half
         # Identify the x and y positions of all nonzero pixels in the image
@@ -59,11 +64,8 @@ class LandFollower:
         # Current positions to be updated for each window
         leftx_current = leftx_base
         rightx_current = rightx_base
-        # Set the width of the windows +/- margin
-        margin = 50
-        # Set minimum number of pixels found to recenter window
-        minpix = 30
-        # Create empty lists to receive left and right lane pixel indices
+        
+        
         left_lane_inds = []
         right_lane_inds = []
 
@@ -126,11 +128,11 @@ class LandFollower:
         else:
             return None, None, None, None, None
 
-    def calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=5, pixel_per_cm=8.6, ref_x_coor_in_PTimg=362):
+    def calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=5, pixel_per_cm=9.3, ref_x_coor_in_PTimg=300, step=1):
         dl_in_pixel = dl_in_cm*pixel_per_cm
         length = 0
-        for index in range(1,200):
-            dl = np.sqrt((center_line_pts[-index,0]-center_line_pts[-(index+1),0])**2 + (center_line_pts[-index,1]-center_line_pts[-(index+1),1])**2)
+        for index in range(1,200,step):
+            dl = np.sqrt((center_line_pts[-index,0]-center_line_pts[-(index+step),0])**2 + (center_line_pts[-index,1]-center_line_pts[-(index+step),1])**2)
             length += dl
             if (length > dl_in_pixel):
                 dx_in_pixel = 400 - center_line_pts[-index,1] 
@@ -192,7 +194,7 @@ class LandFollower:
         dl_in_cm=15
         binary_img = LandFollower.abs_sobel_thresh(perspectiveTransform_img, thresh_min=35, thresh_max=120)
         binary_img_segment = LandFollower.do_segment(binary_img*255)
-        left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts = LandFollower.find_line(binary_img_segment)
+        left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts = LandFollower.find_line(binary_img_segment, nwindows=18, minpix=15)
         
         # Check if lane exist
         if left_fit is not None:
@@ -227,6 +229,10 @@ class LandFollower:
                 vot_right = 0.065
             elif vot_right >0.12:
                 vot_right = 0.12
+
+            #### Temp
+            # vot_left = 0
+            # vot_right = 0
 
             # Calculate forward velocity
             velocity = self.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))

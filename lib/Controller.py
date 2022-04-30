@@ -19,7 +19,7 @@ class Controller:
     def __init__(self):
          ## Create velocity and angular velocity object of PID control ##
         self.velocity = PID(0.6,0,0) #1.7*8/15 #0.6
-        self.omega = PID(0.06,0,0.04) #0.06
+        self.omega = PID(0.10,0,0.00) # suggest 0.08~0.10
         ## The parameter of the differential drive car ##
         r = 3.3   # wheel radius
         l = 12.3  # distance between wheels

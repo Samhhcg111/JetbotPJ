@@ -8,6 +8,8 @@ from lib.StageSwitch import StageSwitch
 from lib.LaneFollower import LandFollower
 from lib.Navigator import Navigator as NV
 from lib.ColorDetector import ColorDetector
+from lib.human_detection import HumanDetector
+from lib.HSV_and_Area_Slider import HSV_and_Area_Setting
 
 import sys
 sys.path.append('../')
@@ -49,6 +51,11 @@ if camera.isOpened():
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,1,4,5)
     CD = ColorDetector()
+    HD = HumanDetector()
+    # Create Sliders for HSV and area setting
+    HSV_and_Area = HSV_and_Area_Setting()
+    HSV_and_Area.slider(window_name="output")
+
     Stage.setStage(1)
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
@@ -73,28 +80,26 @@ if camera.isOpened():
             if Stage.isStage1() and not Stop:
                 # print('do stage 1 task')
                 
-                # Lane following
+                #Lane following
                 outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
                                    right_turning_mode_distance_threshold = 15)
-                if LF.right_turn_mode:
+                if LF.right_turn_mode:  # Open loop right turn motion
                     LF.Stop()
-                    controller.go_stright(robot, 12)
-                    controller.turn(robot, np.deg2rad(85))
+                    controller.go_stright(robot, 14)
+                    controller.turn(robot, np.deg2rad(70))
                     controller.go_stright(robot, 7.5)
-                    LF.right_turn_mode = False
-
-
+                    
                 # if detected human:
                     #do human avoidance
                 #else:
+                #outputIMG = HD.Run(img)
 
-                # Stop Line detection
+                #Stop Line detection
                 stop_line_img = CD.StopLineColorDetector (
                     perspectiveTransform_img, 
-                    ROI = np.array([    [(263, 250), (263, 399), (430, 399), (430,250)]    ])
+                    ROI = np.array([    [(160, 400), (440, 400), (440, 300), (160,300)]    ])
                 )
-                if CD.StopLineColor:
-                # if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff,30):
+                if CD.StopLineColor: # and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):
                     LF.Stop()
                     # controller.turn(robot,np.deg2rad(10))
                     Stage.nextStage()
@@ -102,15 +107,23 @@ if camera.isOpened():
                 # outputIMG = stop_line_img
 
             if Stage.isStage2() and not Stop:
-                print('do traffic light task')
+
                 # Traffic Light detection
-                Traffic_light_marked_img = CD.TrafficLightDetector(img)
+                Traffic_light_marked_img = CD.TrafficLightDetector(
+                    img,
+                    green_lower = np.array([HSV_and_Area.H_min, HSV_and_Area.S_min, HSV_and_Area.V_min], np.uint8),
+                    green_upper = np.array([HSV_and_Area.H_max, HSV_and_Area.S_max, HSV_and_Area.V_max], np.uint8),
+                    green_area_lower_limit = HSV_and_Area.Area
+                    )
                 Red    = CD.RedLight
                 Green  = CD.GreenLingt
                 Yellow = CD.YellowLight
-                if Green and not Red:
-                    Stage.nextStage()
+
                 outputIMG = Traffic_light_marked_img
+
+                # if not Red and Yellow:
+                #     Stage.nextStage()
+                
 
             if Stage.isStage3() and not Stop:
                 # Intersection turn
@@ -130,10 +143,13 @@ if camera.isOpened():
                 if Navigator.TooManyErr(10):
                     controller.turn(robot,np.deg2rad(10))
 
-            # if Stop :
+            if Stop :
                 # LF.Stop()
-                
+                HD.Stop()
+            
+            # Calculate FPS
             fps=int(round(1/timedifferent))
+
             # R visualize_Ref_frame
             if Key_visualize_Ref:
                 # UI_undistort_img=undistort_img.copy()
@@ -145,6 +161,7 @@ if camera.isOpened():
         if Error_count >10:
             print('Too many error ...')
             break
+
         ############################  Command handle ###############################
         # ESC pressed to quit
         if keyCode%256 == 27:
@@ -166,10 +183,17 @@ if camera.isOpened():
             Stage.nextStage()
         # space capture img
         if keyCode%256 == 32:
-            Mycam.takepicture(img)
-        #--------------------------------------------------------------------
+            Mycam.takepicture(undistort_img)
+            print('Chese')
+
+
+        # Calculate time different
         end_time=time.time()
         timedifferent=end_time-start_time
+        if LF.right_turn_mode: # Reset dt after the open-loop right turn motion
+            timedifferent = 0.1
+            LF.right_turn_mode = False
+
     camera.release()
     cv2.destroyAllWindows()
 else:

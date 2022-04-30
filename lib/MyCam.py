@@ -23,15 +23,13 @@ class MyCam:
         self.camera_matrix=calibration_data['camera_matrix']
         self.dist_coeff=calibration_data['dist_coeff']
         #----perspectiveTransfer param-----
-        corner_dst=np.float32([[144,106],[174,46],[328,111],[299,50]])
+        corner_dst=np.float32([[143,201],[181,134],[337,201],[300,136]])
         h=400
         w=600
-        s=20
-        offsety=np.array([[0,1],[0,1],[0,1],[0,1]])
-        offsetx=np.array([[1,0],[1,0],[1,0],[1,0]])
-        corner_tf=np.float32([[0,4],[0,0],[6,4],[6,0]])
-        P=np.mat(corner_tf)*s+np.mat(offsety)*(h-7*s)+np.mat(offsetx)*(w/2)
-        self.Perspective_M=cv2.getPerspectiveTransform(corner_dst,np.float32(P))
+        y_offset = 20 # in pixels
+
+        P = np.float32([[240,400-y_offset], [240,320-y_offset], [360, 400-y_offset], [360,320-y_offset]])
+        self.Perspective_M=cv2.getPerspectiveTransform(corner_dst,P)
         self.Perspective_h=h
         self.Perspective_w=w
     #Camera setting
@@ -84,7 +82,7 @@ class MyCam:
     #------visualize referance frame
     def visualize_Ref_frame(src):
         lines_visualize = src.copy()
-        corner_list=[(144,106),(174,46),(328,111),(299,50)]
+        corner_list=[(143,201),(181,134),(337,201),(300,136)]
         frame_color=(255,0,255)
         cv2.line(lines_visualize,corner_list[0],corner_list[1],frame_color,1)
         cv2.line(lines_visualize,corner_list[0],corner_list[2],frame_color,1)
