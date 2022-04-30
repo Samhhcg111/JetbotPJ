@@ -17,7 +17,7 @@ class Intersesction_Navigator:
 
             ####test####
             if (i == 1):
-                section = Intersection(i,np.array([1,2,3,None,None]),(2,1))
+                section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
             if (i == 2):
                 section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
             if (i == 3):
@@ -30,12 +30,16 @@ class Intersesction_Navigator:
         pos_id = None
         for Intersection_id in self.__intersections:
             for i,id in enumerate(self.__intersections[Intersection_id].ids): 
-                if id[0] == arucoid:
-                    pos_id = self.__intersections[Intersection_id].id
-                    pos = self.__intersections[Intersection_id].pos
-                    now_entry_point = i
+                if id is not None:
+                    if id == arucoid:
+                        pos_id = self.__intersections[Intersection_id].id
+                        pos = self.__intersections[Intersection_id].pos
+                        now_entry_point = i
         if pos_id is None:
             print('Not such aruco id : '+str(arucoid))
+        #special case
+        if arucoid == 1:
+            now_entry_point = 0
         return pos_id,pos,now_entry_point
 
     def getCameraPosition(self,frame,mtx,dist,corners,aruco_ids,intersection_id):
@@ -65,7 +69,7 @@ class Intersesction_Navigator:
         output = perspectiveImg.copy()
         contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for contour in contours:
-            if cv2.contourArea(contour)>10000:
+            if cv2.contourArea(contour)>1500:
                 rect = cv2.minAreaRect(contour)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
@@ -92,43 +96,56 @@ class Intersesction_Navigator:
                 # cv2.putText(img,str(math.degrees(radians)),(80,120),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
                 x = distance*math.cos(radians)
                 y = distance*math.sin(radians)
-                posvec = [x,y]
-                cv2.putText(output,str(posvec),(80,150),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
-                dir_vec = np.array([0,-1])
+                
+                dir_vec = np.array([0,-1]) # camera direction in img coordinate
                 direction_radian = Intersesction_Navigator.__clockwiseAng(ref_vec,dir_vec)
                 dx = math.cos(direction_radian)
                 dy = math.sin(direction_radian)
-                dir_vec = [dx,dy]
-                cv2.putText(output,str(dir_vec),(80,100),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
+                dir_vec = [[dx],[dy]]
+                # add camera bias
+                x = x - dx*12
+                y = y - dy*12
+                posvec = [[x],[y]]
+                cv2.putText(output,str(np.float16(posvec)),(80,180),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
+                # cv2.putText(output,str(dir_vec),(80,100),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
                 output = Intersesction_Navigator.__drawAxis2D(output,origin,ref_vec,2*linelong/RedlineLength)
                 s = Intersection.intersection_size/4
+                midbias = 1 #Test
+                midbias = 0 #Notebook Test
                 def R(radian):
                     return np.mat([[math.cos(radian),-math.sin(radian)],[math.sin(radian),math.cos(radian)]])
                 if now_entry_point == 0:
-                    turn = -2*np.pi
+                    turn = -np.pi
                     correct_vec = R(turn)*np.mat(posvec)
-                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_vec = correct_vec+np.mat([[-midbias],[s]])
                     correct_dir_vec = R(turn)*np.mat(dir_vec)
                 elif now_entry_point == 1:
                     turn = np.pi/2
                     correct_vec = R(turn)*np.mat(posvec)
-                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_vec = correct_vec+np.mat([[s],[midbias]])
                     correct_dir_vec = R(turn)*np.mat(dir_vec)
                 elif now_entry_point == 2:
                     correct_vec = np.mat(posvec)
-                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_vec = correct_vec+np.mat([[midbias],[-s]])
                     correct_dir_vec = np.mat(dir_vec)
                 elif now_entry_point == 3:
                     turn = -np.pi/2
                     correct_vec = R(turn)*np.mat(posvec)
-                    correct_vec = correct_vec+np.mat([0,s])
+                    correct_vec = correct_vec+np.mat([[-s],[-midbias]])
                     correct_dir_vec = R(turn)*np.mat(dir_vec)
+                correct_vec=np.array(correct_vec.T)
+                correct_dir_vec = np.array(correct_dir_vec.T)
                 correct_vec = [correct_vec[0][0],correct_vec[0][1]]
                 correct_dir_vec = [correct_dir_vec[0][0],correct_dir_vec[0][1]]
+                cv2.putText(output,str('now entry point :')+str(now_entry_point),(60,80),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
+                cv2.putText(output,str('pos')+str(np.float16(correct_vec)),(60,150),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
+                cv2.putText(output,str('dir')+str(np.float16(correct_dir_vec)),(60,100),cv2.FONT_HERSHEY_PLAIN,1,(255,255,255),1)
         return output,correct_vec,correct_dir_vec
 
-    def stopLine_navigate(self,StopLineMask,intersection_id,entry_point:int,now_entry_point:int):
-        output,posvec,dir_vec = Intersesction_Navigator.__getCorrectPosfromStopLine(StopLineMask,now_entry_point,10)
+    def stopLine_navigate(self,perspectiveImg,StopLineMask,intersection_id,entry_point:int,now_entry_point:int):
+        RedlineLength = 10 #Notebook Test
+        RedlineLength = 15 #Test
+        output,posvec,dir_vec = Intersesction_Navigator.__getCorrectPosfromStopLine(perspectiveImg,StopLineMask,now_entry_point,RedlineLength)
         entry =self.__intersections[intersection_id].entries[entry_point]
         node = self.__intersections[intersection_id].entryNodes[entry_point]
         JN_vector = np.array([node[0]-posvec[0],node[1]-posvec[1]])
@@ -137,7 +154,7 @@ class Intersesction_Navigator:
         JN_radians = Intersesction_Navigator.__clockwiseAng(dir_vec,JN_vector)
         NE_distance = Intersesction_Navigator.__distance(NE_vector)
         NE_radians = Intersesction_Navigator.__clockwiseAng(JN_vector,NE_vector)
-        return JN_radians,JN_distance,NE_radians,NE_distance
+        return output,JN_radians,JN_distance,NE_radians,NE_distance
 
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int,now_entry_point:int):
         img = frame.copy()
@@ -253,14 +270,14 @@ class Intersection:
     aruco_distance = 18 #test
     # intersection_size = 15 # NoteBook Test
     intersection_size = 15.5*2 #test
-    stop_distance = 10
+    stop_distance = 15
     def __init__(self,id:int,arucoIds:np.array,pos):
         self.id=id
         self.pos = [pos[0],pos[1]]
         self.entries=[None,None,None,None]
         self.entryNodes=[None,None,None,None]
         corners = []
-        self.ids=[]
+        self.ids = list(arucoIds)
         a = self.aruco_distance
         b = self.intersection_size/2
         b2 = self.intersection_size/4
@@ -268,41 +285,42 @@ class Intersection:
         s = self.aruco_size
         stopD = self.stop_distance
         self.stopPoint = [(-b2,b+stopD),(b+stopD,b2),(b2,-b-stopD),(-b-stopD,-b2)]
+        ids = []
         if arucoIds[0] is not None:
             corners.append([[-b+s,a,0],[-b,a,0],[-b,a+s,0],[-b+s,a+s,0]]) #test
             # corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) # NoteBook Test
-            self.ids.append([arucoIds[0]])
+            ids.append([arucoIds[0]])
             self.entries[0] = (b2,b)
             self.entryNodes[0] = (b2,b2)
         if arucoIds[1] is not None:
             corners.append([[a,b-s,0],[a,b,0],[a+s,b,0],[a+s,b-s,0]]) #test
             # corners.append([[a,b,c+s],[a,b+s,c+s],[a,b+s,c],[a,b,c]]) # NoteBook Test
-            self.ids.append([arucoIds[1]])
+            ids.append([arucoIds[1]])
             self.entries[1] = (b,-b2)
             self.entryNodes[1] = (b2,-b2)
         if arucoIds[2] is not None:
             corners.append([[b-s,-a,0],[b,-a,0],[b,-a-s,0],[b-s,-a-s,0]]) #test
             # corners.append([[b,-a,c+s],[b+s,-a,c+s],[b+s,-a,c],[b,-a,c]]) # NoteBook Test
-            self.ids.append([arucoIds[2]])
+            ids.append([arucoIds[2]])
             self.entries[2] = (-b2,-b)
             self.entryNodes[2] = (-b2,-b2)
         if arucoIds[3] is not None:
             corners.append([[-a,-b+s,0],[-a,-b,0],[-a-s,-b,0],[-a-s,-b+s,0]]) #test
             # corners.append([[-a,-b,c+s],[-a,-b-s,c+s],[-a,-b-s,c],[-a,-b,c]]) # NoteBook Test
-            self.ids.append([arucoIds[3]])
+            ids.append([arucoIds[3]])
             self.entries[3] = (-b,b2)
             self.entryNodes[3] = (-b2,b2)
         if len(arucoIds)>4:
             if arucoIds[4] is not None:
                 s2=s/2
                 corners.append([[-s2,s2,0],[s2,s2,0],[s2,-s2,0],[-s2,-s2,0]])  # midpoint
-                self.ids.append([arucoIds[4]])
+                ids.append([arucoIds[4]])
         ### Special case ###
-        # if len(arucoIds)>5:
-            # if arucoIds[5] is not None:
-                #a = # aruco distance
-                # corners.append()
-                # self.ids.append([arucoIds[5]])
-                
-        self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(self.ids))
+        if len(arucoIds)>5:
+            if arucoIds[5] is not None:
+                a = 21.5 # aruco distance
+                corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]])
+                ids.append([arucoIds[5]])
+                self.entries[0] = (b2,b)
+        self.aruco_board = cv2.aruco.Board_create(np.array(corners,np.float32),self.aruco_dictionary,np.array(ids))
         

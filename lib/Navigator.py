@@ -112,15 +112,18 @@ class Navigator:
                 self.complete = True
         return output_img
 
+    def ReCalculatePathsWithStopLine(self,perspectiveImg,StopLineMask):
+        output,self.crossPath[2],self.crossPath[3],self.crossPath[4],self.crossPath[5] = self.IN.stopLine_navigate(perspectiveImg,StopLineMask,self.intersection_id,self.entry,self.now_entry_point)
+        return output
     def GotoStopPoint(self,controller,robot):
-        controller.turn(robot,self.crosspath[0])
-        controller.go_stright(robot,self.crosspath[1])
+        controller.turn(robot,self.crossPath[0],math.radians(-10))
+        controller.go_stright(robot,self.crossPath[1])
 
     def GotoEntry(self,controller,robot):
-        controller.turn(robot,self.crosspath[2])
-        controller.go_stright(robot,self.crosspath[3])
-        controller.turn(robot,self.crosspath[4])
-        controller.go_stright(robot,self.crosspath[5])
+        controller.turn(robot,self.crossPath[2],math.radians(-10))
+        controller.go_stright(robot,self.crossPath[3]+4)
+        controller.turn(robot,self.crossPath[4],math.radians(-10))
+        controller.go_stright(robot,self.crossPath[5])
       
     def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
@@ -137,7 +140,7 @@ class Navigator:
                     if distance<min_distance:
                         min_distance = distance
                         closeId = id[0]
-            self.intersection_id,pos,now_entry_point = self.IN.Indentify_intersection(closeId)
+            self.intersection_id,pos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
             Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
             distance = self.__distance(Pos[0:2])
             if distance < Critical_distance :

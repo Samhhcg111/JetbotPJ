@@ -46,7 +46,7 @@ if camera.isOpened():
     controller = Controller()
     LF = LandFollower(robot,controller)
     Stop = True
-    Stage = StageSwitch()
+    Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,1,4,5)
@@ -54,7 +54,7 @@ if camera.isOpened():
     HD = HumanDetector()
     # Create Sliders for HSV and area setting
     HSV_and_Area = HSV_and_Area_Setting()
-    HSV_and_Area.slider(window_name="output")
+    # HSV_and_Area.slider(window_name="output")
 
     Stage.setStage(1)
  ########################## main loop #############################  
@@ -77,7 +77,7 @@ if camera.isOpened():
                 Stop = True
                 print('Mission complete')
                 
-            if Stage.isStage1() and not Stop:
+            if Stage.isStage(1) and not Stop:
                 # print('do stage 1 task')
                 
                 #Lane following
@@ -93,43 +93,50 @@ if camera.isOpened():
                     #do human avoidance
                     #outputIMG = HD.Run(img)
 
+                if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=25):
+                    print('[Main]Intersection detect')
+                    LF.Stop()
+                    Stage.nextStage()
+
+                
+
+            if Stage.isStage(2) and not Stop:
+                if not Navigator.complete:
+                    outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
+                else :
+                    Navigator.GotoStopPoint(controller=controller,robot=robot)
+                    # Stage.setPause()
+                    Stage.nextStage()
+
+            if Stage.isStage(3) and not Stop:
                 #Stop Line detection
-                stop_line_img = CD.StopLineColorDetector (
+                stop_line_img,stopLineMask = CD.StopLineColorDetector (
                     perspectiveTransform_img, 
                     ROI = np.array([    [(160, 400), (440, 400), (440, 300), (160,300)]    ])
                 )
+                outputIMG = stop_line_img
                 if CD.StopLineColor: # and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):
-                    LF.Stop()
-                    # controller.turn(robot,np.deg2rad(10))
-                    Stage.nextStage()
+                    print('[Main]Stopline detect,recalculate paths')
+                    outputIMG=Navigator.ReCalculatePathsWithStopLine(perspectiveTransform_img,stopLineMask)
+                    Stage.setPause()
+                ## Traffic Light detection
+                # Traffic_light_marked_img = CD.TrafficLightDetector(
+                #     img,
+                #     green_lower = np.array([HSV_and_Area.H_min, HSV_and_Area.S_min, HSV_and_Area.V_min], np.uint8),
+                #     green_upper = np.array([HSV_and_Area.H_max, HSV_and_Area.S_max, HSV_and_Area.V_max], np.uint8),
+                #     green_area_lower_limit = HSV_and_Area.Area
+                #     )
+                # outputIMG = Traffic_light_marked_img
 
-                # outputIMG = stop_line_img
-
-            if Stage.isStage2() and not Stop:
-
-                # Traffic Light detection
-                Traffic_light_marked_img = CD.TrafficLightDetector(
-                    img,
-                    green_lower = np.array([HSV_and_Area.H_min, HSV_and_Area.S_min, HSV_and_Area.V_min], np.uint8),
-                    green_upper = np.array([HSV_and_Area.H_max, HSV_and_Area.S_max, HSV_and_Area.V_max], np.uint8),
-                    green_area_lower_limit = HSV_and_Area.Area
-                    )
-                outputIMG = Traffic_light_marked_img
-
-                if not CD.RedLight and CD.YellowLight:
-                    Stage.nextStage()
+                # if not CD.RedLight and CD.YellowLight:
+                # Stage.nextStage()
                 
+            
 
-            if Stage.isStage3() and not Stop:
-                # Intersection turn
-                outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
-                if Navigator.complete:
-                    Navigator.GotoStopPoint(controller=controller,robot=robot)
+            if Stage.isStage(4) and not Stop:
                     Navigator.GotoEntry(controller=controller,robot=robot)
                     Navigator.Stop()
                     Stage.nextStage()
-                if Navigator.TooManyErr(10):
-                    controller.turn(robot,np.deg2rad(10))
 
             if Stop :
                 # LF.Stop()
@@ -142,7 +149,6 @@ if camera.isOpened():
             if Key_visualize_Ref:
                 UI_undistort_img=undistort_img.copy()
                 outputIMG=MyCam.visualize_Ref_frame(UI_undistort_img)
-                outputIMG = img
             cv2.putText(outputIMG,str(fps),(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
             cv2.imshow("output",outputIMG)
         keyCode = cv2.waitKey(1)
