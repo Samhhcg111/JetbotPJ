@@ -44,7 +44,22 @@ class Intersesction_Navigator:
         XYZ = Intersesction_Navigator.camera2world(rvec,tvec,camera_pos)
         posVector = np.array([XYZ[0][0],XYZ[1][0],XYZ[2][0]])
         return posVector
-        
+    def __drawAxis2D(img,origin,Xvec,Length):
+        def normalize(vec):
+            L = math.sqrt(vec[0]*vec[0]+vec[1]*vec[1])
+            result = np.mat(vec)/L
+            return result
+        Xpt = np.mat(origin)+np.mat(normalize(Xvec))*Length
+        Xpt = np.int0(np.array(Xpt))
+        cv2.line(img,origin[:],Xpt[0][:],(0,0,255),2)
+        def R(radian):
+                    return np.mat([[math.cos(radian),-math.sin(radian)],[math.sin(radian),math.cos(radian)]])
+        Yvec = R(-np.pi/2)*np.mat(Xvec).T
+        Yvec = np.array(Yvec.T)
+        Ypt = np.mat(origin)+np.mat(normalize(Yvec[0][:]))*Length
+        Ypt = np.int0(np.array(Ypt))
+        cv2.line(img,origin[:],Ypt[0][:],(0,255,0),2)
+        return img
     def __getCorrectPosfromStopLine(perspectiveImg,StopLineMask,now_entry_point:int,RedlineLength):
         mask = StopLineMask.copy()
         output = perspectiveImg.copy()
@@ -85,6 +100,7 @@ class Intersesction_Navigator:
                 dy = math.sin(direction_radian)
                 dir_vec = [dx,dy]
                 cv2.putText(output,str(dir_vec),(80,100),cv2.FONT_HERSHEY_PLAIN,2,(255,255,255),1)
+                output = Intersesction_Navigator.__drawAxis2D(output,origin,ref_vec,2*linelong/RedlineLength)
                 s = Intersection.intersection_size/4
                 def R(radian):
                     return np.mat([[math.cos(radian),-math.sin(radian)],[math.sin(radian),math.cos(radian)]])
@@ -121,7 +137,7 @@ class Intersesction_Navigator:
         JN_radians = Intersesction_Navigator.__clockwiseAng(dir_vec,JN_vector)
         NE_distance = Intersesction_Navigator.__distance(NE_vector)
         NE_radians = Intersesction_Navigator.__clockwiseAng(JN_vector,NE_vector)
-        return JN_distance,JN_radians,NE_radians,NE_distance
+        return JN_radians,JN_distance,NE_radians,NE_distance
 
     def navigate(self,frame,mtx,dist,corners,aruco_ids,intersection_id,entry_point:int,now_entry_point:int):
         img = frame.copy()
@@ -184,7 +200,7 @@ class Intersesction_Navigator:
         u3,v3=imgpt[0][0]
         img = MyCam.drawline(img,int(u2),int(v2),int(u3),int(v3),(0,255,0),2)
         cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
-        return img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance
+        return img,JS_radians,JS_distance,SN_radians,SN_distance,NE_radians,NE_distance
 
     def camera2world(rvec:np.array,tvec:np.array,objpt:np.array):
         objpt = np.r_[objpt,[[1]]]

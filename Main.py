@@ -91,8 +91,7 @@ if camera.isOpened():
                     
                 # if detected human:
                     #do human avoidance
-                #else:
-                #outputIMG = HD.Run(img)
+                    #outputIMG = HD.Run(img)
 
                 #Stop Line detection
                 stop_line_img = CD.StopLineColorDetector (
@@ -115,29 +114,18 @@ if camera.isOpened():
                     green_upper = np.array([HSV_and_Area.H_max, HSV_and_Area.S_max, HSV_and_Area.V_max], np.uint8),
                     green_area_lower_limit = HSV_and_Area.Area
                     )
-                Red    = CD.RedLight
-                Green  = CD.GreenLingt
-                Yellow = CD.YellowLight
-
                 outputIMG = Traffic_light_marked_img
 
-                # if not Red and Yellow:
-                #     Stage.nextStage()
+                if not CD.RedLight and CD.YellowLight:
+                    Stage.nextStage()
                 
 
             if Stage.isStage3() and not Stop:
                 # Intersection turn
-                outputIMG=Navigator.Run(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
+                outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
                 if Navigator.complete:
-                    crosspath = Navigator.crossPath
-                    #To stop point
-                    controller.turn(robot,crosspath[0])
-                    controller.go_stright(robot,crosspath[1])
-                    #To entry 
-                    controller.turn(robot,crosspath[2])
-                    controller.go_stright(robot,crosspath[3]+4) # plus turning radius error
-                    controller.turn(robot,crosspath[4])
-                    controller.go_stright(robot,crosspath[5])
+                    Navigator.GotoStopPoint(controller=controller,robot=robot)
+                    Navigator.GotoEntry(controller=controller,robot=robot)
                     Navigator.Stop()
                     Stage.nextStage()
                 if Navigator.TooManyErr(10):
@@ -152,8 +140,8 @@ if camera.isOpened():
 
             # R visualize_Ref_frame
             if Key_visualize_Ref:
-                # UI_undistort_img=undistort_img.copy()
-                # outputIMG=MyCam.visualize_Ref_frame(UI_undistort_img)
+                UI_undistort_img=undistort_img.copy()
+                outputIMG=MyCam.visualize_Ref_frame(UI_undistort_img)
                 outputIMG = img
             cv2.putText(outputIMG,str(fps),(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
             cv2.imshow("output",outputIMG)

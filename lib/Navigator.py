@@ -74,7 +74,7 @@ class Navigator:
             return 1
         if direction[1]<0 and int(direction[0]) == 0:
             return 3 
-    def Run(self,Global_DET:GlobalPosDET,src_img,mtx,dist):
+    def CalculatePaths(self,Global_DET:GlobalPosDET,src_img,mtx,dist):
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         # corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary,parameters=self.ArucoParam)
         output_img = src_img.copy()
@@ -102,15 +102,26 @@ class Navigator:
                 
             if self.count>0:
                 # self.now_entry_point = 2 #NoteBook Test
-                output_img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance = self.IN.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry,self.now_entry_point)
+                output_img,JS_radians,JS_distance,SN_radians,SN_distance,NE_radians,NE_distance = self.IN.navigate(src_img,mtx,dist,corners,ids,self.intersection_id,self.entry,self.now_entry_point)
                 # output_img,JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance = self.IN.navigate(src_img,mtx,dist,corners,ids,2,3,2) #NoteBook Test
                 self.count+=1
-                vectors.append([JS_distance,JS_radians,SN_distance,SN_radians,NE_radians,NE_distance])
+                vectors.append([JS_radians,JS_distance,SN_radians,SN_distance,NE_radians,NE_distance])
                 # print('count '+str(self.count))
             if self.count >5:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
         return output_img
+
+    def GotoStopPoint(self,controller,robot):
+        controller.turn(robot,self.crosspath[0])
+        controller.go_stright(robot,self.crosspath[1])
+
+    def GotoEntry(self,controller,robot):
+        controller.turn(robot,self.crosspath[2])
+        controller.go_stright(robot,self.crosspath[3])
+        controller.turn(robot,self.crosspath[4])
+        controller.go_stright(robot,self.crosspath[5])
+      
     def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
