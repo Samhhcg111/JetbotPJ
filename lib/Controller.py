@@ -52,7 +52,7 @@ class Controller:
         dy_in_cm = dy_in_pixel/pixel_per_cm
         return(dy_in_cm)
     
-    def turn(self,Robot,radian):
+    def turn(self,Robot,radian,radianbias:float=0):
         deg = radian/np.pi*180
         print('Turn '+str(deg)+' deg')
         if not (radian == 0):
@@ -61,7 +61,9 @@ class Controller:
             w = -3
             if radian < 0 :
                 w = -w
-            seconds = (abs(radian)*2)/abs(w)
+            seconds = (abs(radian)*2+radianbias)/abs(w)
+            if seconds <0:
+                seconds = 0
             X = np.array([[0],[w]])
             Vot = self.MC_inv.dot(X-self.M.dot(self.B))
             # print('command: turning')
