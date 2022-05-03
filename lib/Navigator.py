@@ -169,7 +169,13 @@ class Navigator:
       
     def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         '''
-        Indentify whether jetbot is close to intersection.
+        Indentify whether jetbot is close to intersection and update reault to attribute 'atIntersection'
+        
+        Args:
+            src_img : source img
+            mtx : cammera matrix
+            dist : cammera distortion matrix
+            Critical_distance : Critical distance[cm] to identify whether jetbot is atIntersection.
         '''
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
