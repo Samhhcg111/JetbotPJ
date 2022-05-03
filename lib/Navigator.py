@@ -173,8 +173,8 @@ class Navigator:
         
         Args:
             src_img : source img
-            mtx : cammera matrix
-            dist : cammera distortion matrix
+            mtx : camera matrix
+            dist : camera distortion matrix
             Critical_distance : Critical distance[cm] to identify whether jetbot is atIntersection.
         '''
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)

@@ -15,7 +15,9 @@ class PID:
         self.Dterm = self.Kd*(error - error_prev)/dt
         return (self.Pterm + self.Iterm + self.Dterm)
 class Controller:
-    
+    '''
+    This is the basic control class for jetbot.
+    '''
     def __init__(self):
          ## Create velocity and angular velocity object of PID control ##
         self.velocity = PID(0.6,0,0) #1.7*8/15 #0.6
@@ -53,15 +55,24 @@ class Controller:
         return(dy_in_cm)
     
     def turn(self,Robot,radian,radianbias:float=0):
+        '''
+        Turning at constant angular speed in 'least' specific time toward target orientation.
+
+        Args:
+            Robot: robot object to control.
+            radian: Target clockwise orientation in radians unit, range from -2pi~2pi.
+            radianbias: prolong or shorten the turning time.
+        '''
         deg = radian/np.pi*180
         print('Turn '+str(deg)+' deg')
         if not (radian == 0):
-            if radian>np.pi:
-                radian = -(2*np.pi-radian)
+            turn_radian = radian
             w = -3
-            if radian < 0 :
+            if abs(radian)>np.pi:
+                turn_radian = -(2*np.pi-abs(radian))
+            if turn_radian < 0 :
                 w = -w
-            seconds = (abs(radian)*2+radianbias)/abs(w)
+            seconds = (abs(turn_radian)*2+radianbias)/abs(w)
             if seconds <0:
                 seconds = 0
             X = np.array([[0],[w]])
@@ -74,6 +85,13 @@ class Controller:
             Robot.right_motor.value = 0
             # print('command: turning is done')
     def go_stright(self,Robot,distance):
+        '''
+        Move forward at constant speed in specific time.
+
+        Args:
+            Robot: robot object to control.
+            distance: unit [cm]
+        '''
         print('Go stright '+str(distance)+' cm')
         v = 20
         if distance < 0 :
