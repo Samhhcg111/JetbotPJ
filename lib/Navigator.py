@@ -169,7 +169,7 @@ class Navigator:
       
     def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         '''
-        Indentify whether jetbot is close to intersection and update reault to attribute 'atIntersection'
+        Indentify whether jetbot is close to intersection and update the result to attribute 'atIntersection'
         
         Args:
             src_img : source img
