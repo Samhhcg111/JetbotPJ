@@ -8,6 +8,20 @@ from lib.Dijkstra import Dijkstra
 from lib.Intersection import Intersesction_Navigator
 
 class Navigator:
+    '''
+    This is jetbot Navigator Class
+
+    Main function:
+        RunAtIntersection(): determine if jetbot close the intersection and updata position by reading aruco.
+        CalculatePaths():calculate path at intersection by reading aruco
+        Stop():reset Navigator count
+    Common attributes:
+        IntersectionPos: (Int,Int) ,intersection pos ( i , j ) in map array
+        intersection_id: Int ,every intersection has a specific id
+        now_entry_point: Int, entry point that jetbot at now
+        atIntersection: Boolean , whether jetbot is close to intersection
+        complete: Boolean , whether the calulation of paths vector is done
+    '''
     digit_map=np.empty((7,7)).astype(int)
     map_path = os.path.abspath(__file__)+'\\..\\map.csv'
     PathfindingMC=None
@@ -35,8 +49,20 @@ class Navigator:
         self.atIntersection = False
         # self.ArucoParam = cv2.aruco.DetectorParameters_create()
     def genPath(self,i0:int,j0:int,i_dest:int,j_dest:int):
+        '''
+        Generate global path by Dijkstra.
+
+        Args:
+            i0 : now global position row
+            j0 : now global posion col
+            i_dest : destination  global position row
+            j_dest : destination  global position col
+        '''
         self.path = self.PathfindingMC.getpath(i0,j0,i_dest,j_dest)
     def presentMap(self):
+        '''
+        Return pathfinding result img
+        '''
         MAP_img = np.zeros((480,480,3))
         MAP_img[:] = (255,255,255)
         row=MAP_img.shape[0]*0.9
@@ -62,10 +88,16 @@ class Navigator:
         return MAP_img
 
     def __distance(self,vector):
+        '''
+        Return 2D vector distance
+        '''
         distance = math.sqrt(vector[0]*vector[0]+vector[1]*vector[1])
         return distance
         
     def __Identify_entry(self,nowPos:np.array,nextPos:np.array):
+        '''
+        Return now entry point 0~3 by calculate direction vectors
+        '''
         direction = nextPos-nowPos
         if direction[0]<0 and int(direction[1]) == 0:
             return 0
@@ -76,6 +108,10 @@ class Navigator:
         if direction[1]<0 and int(direction[0]) == 0:
             return 3 
     def CalculatePaths(self,Global_DET:GlobalPosDET,src_img,mtx,dist):
+        '''
+        Calculate paths' vectors by reading aruco markers.This funtion should continuously
+        until attrubute 'complete' is true.
+        '''
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         # corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary,parameters=self.ArucoParam)
         output_img = src_img.copy()
@@ -92,11 +128,11 @@ class Navigator:
                         if distance<min_distance:
                             min_distance = distance
                             closeId = ids[i][0]
-                self.intersection_id,pos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
-                Global_DET.setPos(pos[0],pos[1])
-                self.genPath(pos[0],pos[1],self.goalGlobalPos[0],self.goalGlobalPos[1])
+                self.intersection_id,self.IntersectionPos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
+                Global_DET.setPos(self.IntersectionPos[0],self.IntersectionPos[1])
+                self.genPath(self.IntersectionPos[0],self.IntersectionPos[1],self.goalGlobalPos[0],self.goalGlobalPos[1])
                 nextPos = self.path[1]
-                self.entry = self.__Identify_entry(np.array([pos[0],pos[1]]),np.array([nextPos.i,nextPos.j]))
+                self.entry = self.__Identify_entry(np.array([self.IntersectionPos[0],self.IntersectionPos[1]]),np.array([nextPos.i,nextPos.j]))
                 # print('go entry point : '+str(self.entry))
                 self.count+=1
                 # print('Debug1')
@@ -114,6 +150,11 @@ class Navigator:
         return output_img
 
     def ReCalculatePathsWithStopLine(self,perspectiveImg,StopLineMask):
+        '''
+        Recalculate paths' vectors by reading stop-line img.
+        Return:
+            output img 
+        '''
         output,self.crossPath[2],self.crossPath[3],self.crossPath[4],self.crossPath[5] = self.IN.stopLine_navigate(perspectiveImg,StopLineMask,self.intersection_id,self.entry,self.now_entry_point)
         return output
     def GotoStopPoint(self,controller,robot):
@@ -127,6 +168,9 @@ class Navigator:
         controller.go_stright(robot,self.crossPath[5])
       
     def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):
+        '''
+        Indentify whether jetbot is close to intersection.
+        '''
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
             return False
@@ -141,7 +185,7 @@ class Navigator:
                     if distance<min_distance:
                         min_distance = distance
                         closeId = id[0]
-            self.intersection_id,pos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
+            self.intersection_id,self.IntersectionPos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
             Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
             distance = self.__distance(Pos[0:2])
             if distance < Critical_distance :
@@ -151,6 +195,9 @@ class Navigator:
                 self.atIntersection = False
                 # return False
     def Stop(self):
+        '''
+        Reset Navigator.
+        '''
         self.count = 0
         self.complete = False
         self.crossPath = None

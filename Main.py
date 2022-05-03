@@ -99,7 +99,6 @@ if camera.isOpened():
                     #do human avoidance
                     #outputIMG = HD.Run(img)
 
-                
                 IntersectionThread.join() # wait for detection
                 if Navigator.atIntersection:
                     print('[Main]Intersection detect')
