@@ -109,7 +109,7 @@ class Navigator:
             return 3 
     def CalculatePaths(self,Global_DET:GlobalPosDET,src_img,mtx,dist):
         '''
-        Calculate paths' vectors by reading aruco markers.This funtion should continuously
+        Calculate paths' vectors by reading aruco markers.This funtion should be called continuously
         until attrubute 'complete' is true.
         '''
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
