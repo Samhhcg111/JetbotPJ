@@ -56,7 +56,7 @@ class Controller:
     
     def turn(self,Robot,radian,radianbias:float=0):
         '''
-        Turning at constant angular speed in 'least' specific time toward target orientation.
+        Open-loop control.Turning at constant angular speed in 'least' specific time toward target orientation.
 
         Args:
             Robot: robot object to control.
@@ -86,7 +86,7 @@ class Controller:
             # print('command: turning is done')
     def go_stright(self,Robot,distance):
         '''
-        Move forward at constant speed in specific time.
+        Open-loop control.Move forward at constant speed in specific time.
 
         Args:
             Robot: robot object to control.
