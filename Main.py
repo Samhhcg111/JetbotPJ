@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 import time
+import threading
+
 from lib.MyCam import MyCam
 from lib.Controller import Controller
 from lib.GlobalPosDET import GlobalPosDET 
@@ -10,6 +12,7 @@ from lib.Navigator import Navigator as NV
 from lib.ColorDetector import ColorDetector
 from lib.human_detection import HumanDetector
 from lib.HSV_and_Area_Slider import HSV_and_Area_Setting
+
 
 import sys
 sys.path.append('../')
@@ -79,7 +82,10 @@ if camera.isOpened():
                 
             if Stage.isStage(1) and not Stop:
                 # print('do stage 1 task')
-                
+                # Init and run intersection detect
+                IntersectionThread = threading.Thread(Navigator.RunAtIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=25))
+                IntersectionThread.start()
+
                 #Lane following
                 outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
                                    right_turning_mode_distance_threshold = 15)
@@ -93,7 +99,9 @@ if camera.isOpened():
                     #do human avoidance
                     #outputIMG = HD.Run(img)
 
-                if Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=25):
+                
+                IntersectionThread.join() # wait for detection
+                if Navigator.atIntersection:
                     print('[Main]Intersection detect')
                     LF.Stop()
                     Stage.nextStage()

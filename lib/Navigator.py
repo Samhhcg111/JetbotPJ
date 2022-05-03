@@ -32,6 +32,7 @@ class Navigator:
         self.count = 0
         self.complete = False
         self.crossPath = None
+        self.atIntersection = False
         # self.ArucoParam = cv2.aruco.DetectorParameters_create()
     def genPath(self,i0:int,j0:int,i_dest:int,j_dest:int):
         self.path = self.PathfindingMC.getpath(i0,j0,i_dest,j_dest)
@@ -125,7 +126,7 @@ class Navigator:
         controller.turn(robot,self.crossPath[4],math.radians(-10))
         controller.go_stright(robot,self.crossPath[5])
       
-    def atIntersection(self,src_img,mtx,dist,Critical_distance = 30):
+    def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         corners,ids,rejectImgPoints = cv2.aruco.detectMarkers(src_img,self.aruco_dictionary)
         if ids is None:
             return False
@@ -144,9 +145,11 @@ class Navigator:
             Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
             distance = self.__distance(Pos[0:2])
             if distance < Critical_distance :
-                return True
+                self.atIntersection = True
+                # return True
             else:
-                return False
+                self.atIntersection = False
+                # return False
     def Stop(self):
         self.count = 0
         self.complete = False
