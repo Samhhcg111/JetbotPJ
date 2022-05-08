@@ -82,10 +82,15 @@ if camera.isOpened():
             if Stage.isStage(1) and not Stop:
                 # print('do stage 1 task')
                 # Init and run intersection detect
-                IntersectionThread = threading.Thread(Navigator.RunAtIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=25))
-                IntersectionThread.start()
-                HumandetectThread = threading.Thread(HD.Run(undistort_img))
+                # IntersectionThread = threading.Thread(target=Navigator.RunAtIntersection,args=(img,Mycam.camera_matrix,Mycam.dist_coeff,55,))
+                # IntersectionThread.start()
+                HumandetectThread = threading.Thread(target=HD.Run,args=(undistort_img,))
                 HumandetectThread.start()
+                StopLineThread = threading.Thread(target=CD.StopLineColorDetector,args = (
+                    perspectiveTransform_img, 
+                    np.array([    [(160, 400), (440, 400), (440, 210), (160,210)]    ])
+                ,))
+                StopLineThread.start()
                 #Lane following
                 outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
                                    right_turning_mode_distance_threshold = 15)
@@ -96,11 +101,16 @@ if camera.isOpened():
                     controller.go_stright(robot, 7.5)
                 
                 HumandetectThread.join()    #wait for detection
-                if HD.isDetectHuman:
-                    HD.do_human_aviodance(Robot=robot)
-
-                IntersectionThread.join() # wait for detection
-                if Navigator.atIntersection:
+                outputIMG =HD.detectIMG
+                # HD.Run(img)
+                # if HD.isDetectHuman:
+                #     HD.do_human_aviodance(Robot=robot)
+                StopLineThread.join()   # wait fot Stop Line detection
+                outputIMG = CD.stopLineIMG
+                # IntersectionThread.join() # wait for detection
+                # Navigator.RunAtIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff,25)
+                # if Navigator.atIntersection:
+                if CD.StopLineColor:
                     print('[Main]Intersection detect')
                     LF.Stop()
                     Stage.setPause()
@@ -120,7 +130,7 @@ if camera.isOpened():
                 #Stop Line detection
                 stop_line_img,stopLineMask = CD.StopLineColorDetector (
                     perspectiveTransform_img, 
-                    ROI = np.array([    [(160, 400), (440, 400), (440, 300), (160,300)]    ])
+                    ROI = np.array([    [(160, 400), (440, 400), (440, 250), (160,250)]    ])
                 )
                 outputIMG = stop_line_img
                 if CD.StopLineColor: # and Navigator.atIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=35):

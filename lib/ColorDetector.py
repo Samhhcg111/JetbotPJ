@@ -30,7 +30,7 @@ class ColorDetector:
         self.GreenLingt = False
         self.YellowLight = False
         self.StopLineColor = False
-    
+        self.stopLineIMG = None
 
     def TrafficLightDetector (
         self,
@@ -138,7 +138,7 @@ class ColorDetector:
                 imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
                 cv2.putText(imageFrame, "Stop line", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
                 self.StopLineColor = True
-
+        self.stopLineIMG = imageFrame
         return imageFrame,mask
 
 
