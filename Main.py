@@ -10,9 +10,8 @@ from lib.StageSwitch import StageSwitch
 from lib.LaneFollower import LandFollower
 from lib.Navigator import Navigator as NV
 from lib.ColorDetector import ColorDetector
-from lib.human_detection import HumanDetector
+from lib.human_detection_class import HumanDetector
 from lib.HSV_and_Area_Slider import HSV_and_Area_Setting
-
 
 import sys
 sys.path.append('../')
@@ -41,7 +40,7 @@ if camera.isOpened():
     usage()
     # Window
     ######## Initialize ##########
-    Error_count = 0
+    IMG_capture_Error_count = 0
     start_time=0.0
     end_time=0.0
     timedifferent=0.1
@@ -66,26 +65,27 @@ if camera.isOpened():
         # Read from camera and display on windows
         ret, img= camera.read()
         if not ret:
-            print('img read error')
-            Error_count+=1
+            print('[Main] img read error')
+            IMG_capture_Error_count+=1
         else : 
             undistort_img=Mycam.undistortion(img)
             perspectiveTransform_img=Mycam.warpPerspective(undistort_img)
             if not ret:
-                print("Cannot read camera frame, exit from program!")
+                print("[Main] Cannot read camera frame, exit from program!")
                 camera.release()
                 cv2.destroyAllWindows()
                 break
             if np.array_equal(GP.getPos,target_pos):
                 Stop = True
-                print('Mission complete')
+                print('[Main] Mission complete')
                 
             if Stage.isStage(1) and not Stop:
                 # print('do stage 1 task')
                 # Init and run intersection detect
                 IntersectionThread = threading.Thread(Navigator.RunAtIntersection(img,Mycam.camera_matrix,Mycam.dist_coeff, Critical_distance=25))
                 IntersectionThread.start()
-
+                HumandetectThread = threading.Thread(HD.Run(undistort_img))
+                HumandetectThread.start()
                 #Lane following
                 outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
                                    right_turning_mode_distance_threshold = 15)
@@ -94,16 +94,17 @@ if camera.isOpened():
                     controller.go_stright(robot, 14)
                     controller.turn(robot, np.deg2rad(70))
                     controller.go_stright(robot, 7.5)
-                    
-                # if detected human:
-                    #do human avoidance
-                    #outputIMG = HD.Run(img)
+                
+                HumandetectThread.join()    #wait for detection
+                if HD.isDetectHuman:
+                    HD.do_human_aviodance(Robot=robot)
 
                 IntersectionThread.join() # wait for detection
                 if Navigator.atIntersection:
                     print('[Main]Intersection detect')
                     LF.Stop()
-                    Stage.nextStage()
+                    Stage.setPause()
+                    # Stage.nextStage()
 
                 
 
@@ -159,14 +160,14 @@ if camera.isOpened():
             cv2.putText(outputIMG,str(fps),(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
             cv2.imshow("output",outputIMG)
         keyCode = cv2.waitKey(1)
-        if Error_count >10:
-            print('Too many error ...')
+        if IMG_capture_Error_count >10:
+            print('[Main] Too many img_capture error ...')
             break
 
         ############################  Command handle ###############################
         # ESC pressed to quit
         if keyCode%256 == 27:
-            print("Escape hit, closing...")
+            print("[Main] Escape hit, closing...")
             break
         # R visualize_Ref_frame
         if keyCode%256 == 114:
@@ -179,13 +180,13 @@ if camera.isOpened():
                 Stop = True
         # T next stage
         if keyCode%256 == 116:
-            print('Force next stage')
+            print('[Main] Force next stage')
             controller.robotStop(robot)
             Stage.nextStage()
         # space capture img
         if keyCode%256 == 32:
             Mycam.takepicture(undistort_img)
-            print('Chese')
+            print('[Main] Chese')
 
 
         # Calculate time different
@@ -198,4 +199,4 @@ if camera.isOpened():
     camera.release()
     cv2.destroyAllWindows()
 else:
-    print("Unable to open camera")
+    print("[Main] Unable to open camera")
