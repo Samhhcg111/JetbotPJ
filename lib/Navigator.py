@@ -158,13 +158,13 @@ class Navigator:
         output,self.crossPath[2],self.crossPath[3],self.crossPath[4],self.crossPath[5] = self.IN.stopLine_navigate(perspectiveImg,StopLineMask,self.intersection_id,self.entry,self.now_entry_point)
         return output
     def GotoStopPoint(self,controller,robot):
-        controller.turn(robot,self.crossPath[0],math.radians(-10))
+        controller.turn(robot,self.crossPath[0])
         controller.go_stright(robot,self.crossPath[1])
 
     def GotoEntry(self,controller,robot):
-        controller.turn(robot,self.crossPath[2],math.radians(-10))
+        controller.turn(robot,self.crossPath[2])
         controller.go_stright(robot,self.crossPath[3]+4)
-        controller.turn(robot,self.crossPath[4],math.radians(-10))
+        controller.turn(robot,self.crossPath[4],math.radians(-5))
         controller.go_stright(robot,self.crossPath[5])
       
     def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):

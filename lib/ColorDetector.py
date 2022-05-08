@@ -105,6 +105,14 @@ class ColorDetector:
         return imageFrame
 
     
+    # def StopLineColorDetector (
+    #     self,
+    #     image,
+    #     ROI = np.array([    [(210, 250), (210, 342), (263, 399), (430, 399), (500,305), (500, 250)]    ]),
+    #     stop_line_color_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
+    #     stop_line_color_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
+    #     area_lower_limit = 1500,
+    # ):
     def StopLineColorDetector (
         self,
         image,
@@ -112,7 +120,28 @@ class ColorDetector:
         stop_line_color_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
         stop_line_color_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
         area_lower_limit = 1500,
+        HSV_Data = [170,180,60,120,111,180,1500],
     ):
+        '''
+        Run Stop line detection
+
+        Args:
+            image: source image
+            ROI: region of interest
+            stop_line_color_lower: HSV lower bound
+            stop_line_color_upper: HSV upper bound
+            area_lower_limit: critical area
+            HSV_Data:1-D list. The easy way to apply HSV bound ex:[H_min,H_max,S_min,S_max,V_min,V_max,Area]
+        
+        Returns:
+            imageFrame: red line detection image
+            mask: red line bitwise image
+        '''
+        if HSV_Data is not None:
+            stop_line_color_lower  = np.array([HSV_Data[0], HSV_Data[2], HSV_Data[4]], np.uint8)
+            stop_line_color_upper = np.array([HSV_Data[1], HSV_Data[3], HSV_Data[5]], np.uint8)
+            area_lower_limit = HSV_Data[6]
+
         imageFrame = image.copy()
         # Input image
         segmentedFrame = ColorDetector.do_segment(imageFrame, polygons=ROI) 
@@ -130,7 +159,7 @@ class ColorDetector:
         self.StopLineColor = False
 
         #Creating contour to track red color
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for pic, contour in enumerate(contours):
             area = cv2.contourArea(contour)
             if area > area_lower_limit:

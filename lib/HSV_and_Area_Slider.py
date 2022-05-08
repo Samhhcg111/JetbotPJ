@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 
 class HSV_and_Area_Setting:
-
+    '''
+    The origin HSV and Area class. Disuse NOW !
+    '''
     def __init__(self):
         self.H_min = 0
         self.H_max = 0

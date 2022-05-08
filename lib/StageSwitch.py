@@ -1,6 +1,12 @@
 
 class StageSwitch:
     def __init__(self,TotalStage:int = 4):
+        '''
+        This is StageSwitch class, the basic state switch for finite state machine.
+
+        Args:
+            TotalStage: Total number of stages
+        '''
         self.__stage = 1
         self.__TotalStage = TotalStage
         self.__pause = False

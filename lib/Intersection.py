@@ -89,6 +89,7 @@ class Intersesction_Navigator:
                     linelong = Intersesction_Navigator.__distance(ref_vec)
                 # avg = np.int0(avg)
                 # origin = avg
+                linelong = 135 # Test
                 cv2.line(output,(int(output.shape[1]/2),int(output.shape[0])),origin[:],(0,255,0),2)
                 vec = np.array([mask.shape[1]/2-origin[0],mask.shape[0]-origin[1]])
                 distance = Intersesction_Navigator.__distance(vec)/linelong*RedlineLength
