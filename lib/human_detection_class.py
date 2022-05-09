@@ -30,6 +30,7 @@ class HumanDetector:
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         self.detectIMG = None
+        self.Controller = Controller()
     def Stop(self):
         self.human_detection_count = 0
 
@@ -45,7 +46,7 @@ class HumanDetector:
 
         # detect people in the image
         # returns the bounding boxes for the detected objects
-        boxes, weights = self.hog.detectMultiScale(frame, winStride=(8,8), padding=(16,16),scale=1.05,finalThreshold=2.0,useMeanshiftGrouping=False )
+        boxes, weights = self.hog.detectMultiScale(frame, winStride=(8,8), padding=(8,8),scale=1.05,finalThreshold=2.0,useMeanshiftGrouping=False )
 
         boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in boxes])
 
@@ -55,14 +56,14 @@ class HumanDetector:
                             (0, 255, 0), 2)
             area = (xA-xB)*(yA-yB)  
             print ('area = ', area)
-            if area > 22000:
+            if area > 25000:
                 self.human_detection_count += 1
                 print("HumanDetection: true")           
             else:        
                 print("HumanDetection: no")  
                 
 
-        if self.human_detection_count > 30:
+        if self.human_detection_count > 2:
             self.isDetectHuman = True
 
         output = frame
@@ -72,14 +73,16 @@ class HumanDetector:
     def do_human_aviodance(self,Robot):
         robot = Robot
         if self.isDetectHuman == True:
-            Controller.robotStop(robot)
-            Controller.turn(robot, np.deg2rad(-70))
-            Controller.go_stright(robot, 14)
-            Controller.turn(robot, np.deg2rad(70))
-            Controller.go_stright(robot, 14)
-            Controller.turn(robot, np.deg2rad(70))
-            Controller.go_stright(robot, 14)
-            Controller.turn(robot, np.deg2rad(-70))
+            #Controller.robotStop(robot)
+            self.Controller.turn(robot, radian=np.deg2rad(-70))
+            self.Controller.go_stright(robot, 20)
+            self.Controller.turn(robot, radian=np.deg2rad(60))
+            self.Controller.go_stright(robot, 30)
+            self.Controller.turn(robot, radian=np.deg2rad(60))
+            self.Controller.go_stright(robot, 18)
+            self.Controller.turn(robot, radian=np.deg2rad(-70))
+            self.human_detection_count = 0
+            self.isDetectHuman = False
 
      
 
