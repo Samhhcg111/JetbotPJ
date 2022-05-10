@@ -76,6 +76,13 @@ if camera.isOpened():
     StopLineROI = np.array([    [(200, 400), (380, 400), (380, 180), (200,180)]    ])
     IntersectionStopLineROI = np.array([    [(160, 400), (440, 400), (440, 210), (160,210)]    ])
     TrafficLightHSV.setValue([59, 94, 45, 141, 95, 213, 300])
+
+    '''
+    Controller setting
+    '''
+    controller.setStrightParam(B=1,C=1)
+    controller.setTurnParam(B=2,C=0)
+    
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
         start_time=time.time()
