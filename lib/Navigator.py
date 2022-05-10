@@ -27,7 +27,7 @@ class Navigator:
     PathfindingMC=None
     path=None
     IN = Intersesction_Navigator()
-    aruco_dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_100)
+    aruco_dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_50)
     def __init__(self,map_path,i0:int,j0:int,i_dest:int,j_dest:int):
         if map_path is not None:
             self.map_path=map_path
