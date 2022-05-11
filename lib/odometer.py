@@ -62,8 +62,8 @@ class odometer:
         ReturnS
             orientation: accumulation angle
         '''
-        self.angular_velocity(Vin)
-        self.orientation += self.angular_velocity*dt
+        self.angular_velocity_calculator(Vin)
+        self.orientation += abs(self.angular_velocity)*dt
         return self.orientation
 
     def reset_odometer(self):

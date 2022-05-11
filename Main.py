@@ -80,8 +80,8 @@ if camera.isOpened():
     '''
     Controller setting
     '''
-    controller.setStrightParam(B=1,C=1)
-    controller.setTurnParam(B=2,C=0)
+    # controller.setStrightParam(B=1.1,C=1)
+    # controller.setTurnParam(B=2,C=0)
     
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:

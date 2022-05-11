@@ -1,8 +1,7 @@
 import math
 import numpy as np
 import time
-import odometer
-import threading
+from lib.odometer import odometer
 class PID:
     def __init__(self, P, I, D):
         self.Kp = P
@@ -37,8 +36,8 @@ class Controller:
         self.B = np.array([[b_L], [b_R]])
         MC = (self.M.dot(self.C))
         self.MC_inv = np.linalg.inv(MC)
-        self.__TurnParam = [0,2,0]
-        self.__StrightParam = [0,1,1]
+        self.__TurnParam = [0,1,0]
+        self.__StrightParam = [0,1.1,1]
     def get_feedback(self, ex, ex_prev, ey, ey_prev, dt):
         # Calculate the feedback
         v = self.velocity.output(ex, ex_prev, dt)
@@ -57,7 +56,7 @@ class Controller:
         dy_in_cm = dy_in_pixel/pixel_per_cm
         return(dy_in_cm)
 
-    def setTurnParam(self,A=0,B=2,C=0):
+    def setTurnParam(self,A=0,B=1,C=0):
         '''
         Set the turning curve parameters of function:
         waiting seconds =( A*radians^2 + B*radian + c )/ AngularVelocity
@@ -69,7 +68,7 @@ class Controller:
         '''
         self.__TurnParam = [A,B,C]
 
-    def setStrightParam(self,A=0,B=1,C=1):
+    def setStrightParam(self,A=0,B=1,C=0):
         '''
         Set the 'go stright' curve parameters of function:
         waiting seconds = ( A*distance^2 + B*distance + c ) / Velocity
@@ -154,7 +153,7 @@ class Controller:
             Vot = self.MC_inv.dot(X-self.M.dot(self.B))
             od = odometer(self)
             dt = 0
-            while od.angular_odometer(Vot,dt) >turn_radian:
+            while od.angular_odometer(Vot,dt) <abs(turn_radian):
                 t0 = time.time()
                 Robot.left_motor.value = Vot[0][0]
                 Robot.right_motor.value = Vot[1][0]
@@ -167,14 +166,14 @@ class Controller:
         Using odometer to go to a specific distance
         '''
         print('Go stright(Odometer) '+str(distance)+' cm')
-        V=20
+        v=10
         if distance < 0 :
             v = -v
         X = np.array([[v],[0]])
         Vot = self.MC_inv.dot(X-self.M.dot(self.B))
         od = odometer(self)
         dt = 0
-        while od.odometer(Vot,dt) >distance:
+        while od.odometer(Vot,dt) < distance:
             t0 = time.time()
             Robot.left_motor.value = Vot[0][0]
             Robot.right_motor.value = Vot[1][0]
