@@ -1,10 +1,10 @@
 import numpy as np
 import cv2
+from lib.odometer import odometer
 
 class LandFollower:
 
-    ############ Lane Detection Alogrithm #################
-
+    # Segement the image for ROI
     def do_segment(frame):
         # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
         # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
@@ -148,6 +148,7 @@ class LandFollower:
         self.robot = Robot
         self.dl_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
         self.right_turn_mode = False
+        self.odometer = odometer()
 
     def Stop(self):
         self.pid_count = 0
@@ -155,15 +156,9 @@ class LandFollower:
         self.robot.right_motor.value = 0
 
 
-    # Forward velocity calulator
-    def forward_velocity_calculator(self, Vin):
-        M = self.controller.M
-        C = self.controller.C
-        B = self.controller.B
-        X = M.dot(C.dot(Vin)+B)
-        return X[0][0]
-
-    # Right turn checker
+    '''
+    Right turn checker: To search for the right corner turn in the lane
+    '''
     def RightTrakingChecker(self, left_fit, dt, velocity, distance_required=20):
         # Remove old data
         self.dl_and_right_turn_condition = np.delete(self.dl_and_right_turn_condition, 0, axis=0)
@@ -189,7 +184,10 @@ class LandFollower:
         # print(sum_of_frame)
         
     
-    #------------start--------------------
+    
+    '''
+    The main part of lane follower
+    '''
     def Run(self, perspectiveTransform_img, dt, right_turning_mode_distance_threshold=20):
         dl_in_cm=15
         binary_img = LandFollower.abs_sobel_thresh(perspectiveTransform_img, thresh_min=35, thresh_max=120)
@@ -235,22 +233,20 @@ class LandFollower:
             # vot_right = 0
 
             # Calculate forward velocity
-            velocity = self.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
-            #print(velocity)
-
+            velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
+            
             # Check if entering right turning mode is needed
             self.RightTrakingChecker(left_fit, dt, velocity, distance_required=right_turning_mode_distance_threshold)
             if self.right_turn_mode:
                 self.dl_and_right_turn_condition = np.zeros((50,2)) # reset
                 return binary_img_segment
 
-
-            #(vot_left, vot_right) = (0.0,0.0)
             
             # update the error
             self.ex_prev = ex
             self.ey_prev = ey
-            #------------------------------------
+
+            # Output image
             output=binary_img_segment_lane_detection
             self.robot.left_motor.value=vot_left
             self.robot.right_motor.value=vot_right

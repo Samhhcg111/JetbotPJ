@@ -68,11 +68,11 @@ if camera.isOpened():
     '''
     Common setting
     '''
-    # Create Sliders for HSV and area setting
+    ## Create Sliders for HSV and area setting
     # HSV_and_Area.slider(window_name="output")
-    Stage.setStage(1)
     ## StopLine setting ##
     # StopLineHSV.slider(window_name="output")
+    Stage.setStage(1)
     StopLineROI = np.array([    [(200, 400), (380, 400), (380, 180), (200,180)]    ])
     IntersectionStopLineROI = np.array([    [(160, 400), (440, 400), (440, 210), (160,210)]    ])
     TrafficLightHSV.setValue([59, 94, 45, 141, 95, 213, 300])
