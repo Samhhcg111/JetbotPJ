@@ -8,10 +8,11 @@ class LandFollower:
     Function: Segment the image for Region of Interest (ROI)
     '''
     def do_segment(frame):
-        # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
-        # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
+
+        # [number of rows, number of columns, number of channels] 
         height = frame.shape[0]
         width = frame.shape[1]
+
         # Creates a triangular polygon for the mask defined by three (x, y) coordinates
         polygons = np.array([
                                 [(182, 400), (390, 400), (600, 165), (600, 0), (0,0)]
@@ -22,6 +23,7 @@ class LandFollower:
         cv2.fillPoly(mask, polygons, (255, 255, 255))
         # A bitwise and operation between the mask and frame keeps only the triangular area of the frame
         segment = cv2.bitwise_and(frame, mask)
+
         return segment
 
 
@@ -66,7 +68,6 @@ class LandFollower:
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
         # Find the peak of the left and right halves of the histogram
         # These will be the starting point for the left and right lines
-        #midpoint = np.int(histogram.shape[0]/2)
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
@@ -184,7 +185,12 @@ class LandFollower:
 
 
     '''
-    Right turn checker: To search for the right corner turn in the lane
+    Function: To search for the right corner turn in the lane
+
+    Args:
+        left_fit:  Left lane fitting parameter  [a, b, c] for x = a*y^2 + b*y + c
+        velocity:  Current forward velocity
+        distance required:  Travel distance required to triger the right turn mode (see alogrithm for details)
     '''
     def RightTrakingChecker(self, left_fit, dt, velocity, distance_required=20):
         # Remove old data
