@@ -4,7 +4,9 @@ from lib.odometer import odometer
 
 class LandFollower:
 
-    # Segement the image for ROI
+    '''
+    Function: Segment the image for Region of Interest (ROI)
+    '''
     def do_segment(frame):
         # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
         # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
@@ -22,6 +24,10 @@ class LandFollower:
         segment = cv2.bitwise_and(frame, mask)
         return segment
 
+
+    '''
+    Function: Sobel filter
+    '''
     def abs_sobel_thresh(img, thresh_min=0, thresh_max=255):
     
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -38,12 +44,22 @@ class LandFollower:
 
         return binary_output
 
+    '''
+    Funciton: find_line
+
+    Args:
+        binary_warped: Sobel filtered and segmented image (should be binary image)
+        midpoint:  The x axis of the jetbot
+        nwindows:  Choose the number of sliding windows
+        margin:    Set the width of the windows +/- margin
+        minpix:    Create empty lists to receive left and right lane pixel indices
+    '''
     def find_line(
         binary_warped, 
-        midpoint = 300, # The x axis of the jetbot
-        nwindows = 9, # Choose the number of sliding windows
-        margin = 50, # Set the width of the windows +/- margin
-        minpix = 30  # Create empty lists to receive left and right lane pixel indices
+        midpoint = 300, 
+        nwindows = 9, 
+        margin = 50, 
+        minpix = 30  
         ):
 
         # Take a histogram of the bottom half of the image
@@ -128,6 +144,17 @@ class LandFollower:
         else:
             return None, None, None, None, None
 
+    
+    '''
+    Function: Calculate the deviation to desired point
+
+    Args:
+        center_line_pts:  Lane center line points for y=200~400
+        dl_in_cm:         Distance to desired point alone center line
+        pixel_per_cm:     Scale in pixel per cm
+        ref_x_coor_in_PT_img:   Referece x axis of Jetbot in perspective transformed image
+        step:             Step to calculate the distance alone center line (lower -> more acuate and time consuming)
+    '''
     def calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=5, pixel_per_cm=9.3, ref_x_coor_in_PTimg=300, step=1):
         dl_in_pixel = dl_in_cm*pixel_per_cm
         length = 0
@@ -184,7 +211,7 @@ class LandFollower:
         # print(sum_of_frame)
         
     
-    
+
     '''
     The main part of lane follower
     '''
@@ -207,12 +234,12 @@ class LandFollower:
             ex = dx_in_cm
             ey = dy_in_cm
 
-            #-------------P I D------------------
+            # PID
             if self.pid_count == 0:
                 self.ex_prev = ex
                 self.ey_prev = ey
                 self.pid_count = 1
-            #filter out extreme value
+            # Filter out extreme value
             if np.abs(ey)>=12:  #7
                 ey=np.sign(ey)*12
             # Get the feedback
