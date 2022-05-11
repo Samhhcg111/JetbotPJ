@@ -1,6 +1,8 @@
 import math
 import numpy as np
 import time
+import odometer
+import threading
 class PID:
     def __init__(self, P, I, D):
         self.Kp = P
@@ -136,7 +138,7 @@ class Controller:
         Robot.right_motor.value = 0
         # print('command: going straight is done')
 
-    def Od_turn(self,Robot,odometer,radian):
+    def Od_turn(self,Robot,radian):
         '''
         Using odometer to turn toward a specific orientation
         '''
@@ -150,13 +152,17 @@ class Controller:
                 w = -w
             X = np.array([[0],[w]])
             Vot = self.MC_inv.dot(X-self.M.dot(self.B))
-            while odometer.radian<radian:
+            od = odometer(self)
+            dt = 0
+            while od.angular_odometer(Vot,dt) >turn_radian:
+                t0 = time.time()
                 Robot.left_motor.value = Vot[0][0]
                 Robot.right_motor.value = Vot[1][0]
+                dt = time.time()-t0
             Robot.left_motor.value = 0
             Robot.right_motor.value = 0
         
-    def Od_go_stright(self,Robot,odometer,distance):
+    def Od_go_stright(self,Robot,distance):
         '''
         Using odometer to go to a specific distance
         '''
@@ -166,9 +172,13 @@ class Controller:
             v = -v
         X = np.array([[v],[0]])
         Vot = self.MC_inv.dot(X-self.M.dot(self.B))
-        while odometer.distance <distance:
+        od = odometer(self)
+        dt = 0
+        while od.odometer(Vot,dt) >distance:
+            t0 = time.time()
             Robot.left_motor.value = Vot[0][0]
             Robot.right_motor.value = Vot[1][0]
+            dt = time.time()-t0
         Robot.left_motor.value = 0
         Robot.right_motor.value = 0
 

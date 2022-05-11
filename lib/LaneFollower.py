@@ -1,15 +1,17 @@
 import numpy as np
 import cv2
+from lib.odometer import odometer
 
 class LandFollower:
 
-    ############ Lane Detection Alogrithm #################
-
     def do_segment(frame):
-        # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
-        # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
+        '''
+        Function: Segment the image for Region of Interest (ROI)
+        '''
+        # [number of rows, number of columns, number of channels] 
         height = frame.shape[0]
         width = frame.shape[1]
+
         # Creates a triangular polygon for the mask defined by three (x, y) coordinates
         polygons = np.array([
                                 [(182, 400), (390, 400), (600, 165), (600, 0), (0,0)]
@@ -20,10 +22,14 @@ class LandFollower:
         cv2.fillPoly(mask, polygons, (255, 255, 255))
         # A bitwise and operation between the mask and frame keeps only the triangular area of the frame
         segment = cv2.bitwise_and(frame, mask)
+
         return segment
 
-    def abs_sobel_thresh(img, thresh_min=0, thresh_max=255):
-    
+
+    def abs_sobel_thresh(img, thresh_min=0, thresh_max=255):  
+        '''
+        Function: Sobel filter
+        '''
         gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         
         # Sobel x and y component
@@ -38,19 +44,27 @@ class LandFollower:
 
         return binary_output
 
+    
     def find_line(
         binary_warped, 
-        midpoint = 300, # The x axis of the jetbot
-        nwindows = 9, # Choose the number of sliding windows
-        margin = 50, # Set the width of the windows +/- margin
-        minpix = 30  # Create empty lists to receive left and right lane pixel indices
+        midpoint = 300, 
+        nwindows = 9, 
+        margin = 50, 
+        minpix = 30  
         ):
-
+        '''
+        Funciton: find_line
+        Args:
+            binary_warped: Sobel filtered and segmented image (should be binary image)
+            midpoint:  The x axis of the jetbot
+            nwindows:  Choose the number of sliding windows
+            margin:    Set the width of the windows +/- margin
+            minpix:    Create empty lists to receive left and right lane pixel indices
+        '''
         # Take a histogram of the bottom half of the image
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
         # Find the peak of the left and right halves of the histogram
         # These will be the starting point for the left and right lines
-        #midpoint = np.int(histogram.shape[0]/2)
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
@@ -128,7 +142,18 @@ class LandFollower:
         else:
             return None, None, None, None, None
 
+    
+    
     def calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=5, pixel_per_cm=9.3, ref_x_coor_in_PTimg=300, step=1):
+        '''
+        Function: Calculate the deviation to desired point
+        Args:
+            center_line_pts:  Lane center line points for y=200~400
+            dl_in_cm:         Distance to desired point alone center line
+            pixel_per_cm:     Scale in pixel per cm
+            ref_x_coor_in_PT_img:   Referece x axis of Jetbot in perspective transformed image
+            step:             Step to calculate the distance alone center line (lower -> more acuate and time consuming)
+        '''
         dl_in_pixel = dl_in_cm*pixel_per_cm
         length = 0
         for index in range(1,200,step):
@@ -148,6 +173,7 @@ class LandFollower:
         self.robot = Robot
         self.dl_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
         self.right_turn_mode = False
+        self.odometer = odometer(self.controller)
 
     def Stop(self):
         self.pid_count = 0
@@ -155,16 +181,15 @@ class LandFollower:
         self.robot.right_motor.value = 0
 
 
-    # Forward velocity calulator
-    def forward_velocity_calculator(self, Vin):
-        M = self.controller.M
-        C = self.controller.C
-        B = self.controller.B
-        X = M.dot(C.dot(Vin)+B)
-        return X[0][0]
-
-    # Right turn checker
+    
     def RightTrakingChecker(self, left_fit, dt, velocity, distance_required=20):
+        '''
+        Function: To search for the right corner turn in the lane
+        Args:
+            left_fit:  Left lane fitting parameter  [a, b, c] for x = a*y^2 + b*y + c
+            velocity:  Current forward velocity
+            distance required:  Travel distance required to triger the right turn mode (see alogrithm for details)
+        '''
         # Remove old data
         self.dl_and_right_turn_condition = np.delete(self.dl_and_right_turn_condition, 0, axis=0)
         # Add new data
@@ -189,8 +214,12 @@ class LandFollower:
         # print(sum_of_frame)
         
     
-    #------------start--------------------
+
+   
     def Run(self, perspectiveTransform_img, dt, right_turning_mode_distance_threshold=20):
+        '''
+        The main part of lane follower
+        '''
         dl_in_cm=15
         binary_img = LandFollower.abs_sobel_thresh(perspectiveTransform_img, thresh_min=35, thresh_max=120)
         binary_img_segment = LandFollower.do_segment(binary_img*255)
@@ -209,12 +238,12 @@ class LandFollower:
             ex = dx_in_cm
             ey = dy_in_cm
 
-            #-------------P I D------------------
+            # PID
             if self.pid_count == 0:
                 self.ex_prev = ex
                 self.ey_prev = ey
                 self.pid_count = 1
-            #filter out extreme value
+            # Filter out extreme value
             if np.abs(ey)>=12:  #7
                 ey=np.sign(ey)*12
             # Get the feedback
@@ -235,22 +264,20 @@ class LandFollower:
             # vot_right = 0
 
             # Calculate forward velocity
-            velocity = self.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
-            #print(velocity)
-
+            velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
+            
             # Check if entering right turning mode is needed
             self.RightTrakingChecker(left_fit, dt, velocity, distance_required=right_turning_mode_distance_threshold)
             if self.right_turn_mode:
                 self.dl_and_right_turn_condition = np.zeros((50,2)) # reset
                 return binary_img_segment
 
-
-            #(vot_left, vot_right) = (0.0,0.0)
             
             # update the error
             self.ex_prev = ex
             self.ey_prev = ey
-            #------------------------------------
+
+            # Output image
             output=binary_img_segment_lane_detection
             self.robot.left_motor.value=vot_left
             self.robot.right_motor.value=vot_right
