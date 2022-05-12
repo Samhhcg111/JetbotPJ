@@ -54,14 +54,14 @@ if camera.isOpened():
     Initialize classes
     '''
     robot = Robot()
-    controller = Controller()
+    controller = Controller(Robot=robot)
     LF = LandFollower(robot,controller)
     Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,1,4,5)
     CD = ColorDetector()
-    HD = HumanDetector()
+    HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
     TrafficLightHSV = HSV_DATA(dataPath,'TrafficLightHSV')
 
@@ -124,9 +124,9 @@ if camera.isOpened():
                 outputIMG = img
                 if LF.right_turn_mode:  # Open loop right turn motion
                     LF.Stop()
-                    controller.go_stright(robot, 14)
-                    controller.turn(robot, np.deg2rad(70))
-                    controller.go_stright(robot, 7.5)
+                    controller.go_stright(14)
+                    controller.turn(np.deg2rad(70))
+                    controller.go_stright(7.5)
 
                 '''
                 Human detection
@@ -158,7 +158,7 @@ if camera.isOpened():
                 if not Navigator.complete:
                     outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
                 else :
-                    Navigator.GotoStopPoint(controller=controller,robot=robot)
+                    Navigator.GotoStopPoint(controller=controller)
                     # Stage.setPause()
                     Stage.nextStage()
 
@@ -199,7 +199,7 @@ if camera.isOpened():
             Stage 4: go to the next road
             '''
             if Stage.isStage(4) and not Stop:
-                    Navigator.GotoEntry(controller=controller,robot=robot)
+                    Navigator.GotoEntry(controller=controller)
                     Navigator.Stop()
                     Stage.nextStage()
 
@@ -244,13 +244,13 @@ if camera.isOpened():
                 Stop = False
             else:
                 Key_visualize_Ref=True
-                controller.robotStop(robot)
+                controller.robotStop()
                 Stop = True
 
         # T next stage
         if keyCode%256 == 116:
             print('[Main] Force next stage')
-            controller.robotStop(robot)
+            controller.robotStop()
             Stage.nextStage()
 
         # space capture img

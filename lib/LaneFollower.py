@@ -167,10 +167,10 @@ class LandFollower:
                 return (dx_in_cm, dy_in_cm)
 
 
-    def __init__(self,Robot,Controller):
+    def __init__(self,Controller):
         self.controller = Controller
         self.pid_count = 0
-        self.robot = Robot
+        self.robot = self.controller.robot
         self.dl_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
         self.right_turn_mode = False
         self.odometer = odometer(self.controller)

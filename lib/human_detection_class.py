@@ -23,14 +23,14 @@ from lib.Controller import Controller
 
 class HumanDetector:
 
-    def __init__(self):
+    def __init__(self,controller):
         self.Human = False
         self.human_detection_count=0
         self.isDetectHuman = False
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         self.detectIMG = None
-        self.Controller = Controller()
+        self.Controller = controller
     def Stop(self):
         self.human_detection_count = 0
 
@@ -70,17 +70,16 @@ class HumanDetector:
         self.detectIMG = output
         return output
     
-    def do_human_aviodance(self,Robot):
-        robot = Robot
+    def do_human_aviodance(self):
         if self.isDetectHuman == True:
-            #Controller.robotStop(robot)
-            self.Controller.turn(robot, radian=np.deg2rad(-70))
-            self.Controller.go_stright(robot, 20)
-            self.Controller.turn(robot, radian=np.deg2rad(60))
-            self.Controller.go_stright(robot, 30)
-            self.Controller.turn(robot, radian=np.deg2rad(60))
-            self.Controller.go_stright(robot, 18)
-            self.Controller.turn(robot, radian=np.deg2rad(-70))
+            #Controller.robotStop()
+            self.Controller.turn(radian=np.deg2rad(-70))
+            self.Controller.go_stright(20)
+            self.Controller.turn(radian=np.deg2rad(60))
+            self.Controller.go_stright(30)
+            self.Controller.turn(radian=np.deg2rad(60))
+            self.Controller.go_stright(18)
+            self.Controller.turn(radian=np.deg2rad(-70))
             self.human_detection_count = 0
             self.isDetectHuman = False
 
