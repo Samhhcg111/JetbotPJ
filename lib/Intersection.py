@@ -220,6 +220,16 @@ class Intersesction_Navigator:
         cv2.aruco.drawAxis(img,mtx,dist,rvec,tvec,2)
         return img,JS_radians,JS_distance,SN_radians,SN_distance,NE_radians,NE_distance
 
+    # def jetbotTurningBias(radians,direction):
+    #     Turning_R = 6.6  
+    #     def R(radian):
+    #                 return np.mat([[math.cos(radian),-math.sin(radian)],[math.sin(radian),math.cos(radian)]])
+    #     if radians>0:
+    #         bias = R(radians-np.pi/2)*direction*Turning_R
+    #     else:
+    #         bias = R(radians+np.pi/2)*direction*Turning_R
+        
+
     def camera2world(rvec:np.array,tvec:np.array,objpt:np.array):
         objpt = np.r_[objpt,[[1]]]
         R,jacobian = cv2.Rodrigues(rvec)
