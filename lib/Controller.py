@@ -2,6 +2,7 @@ import math
 import numpy as np
 import time
 from lib.odometer import odometer
+from lib.odometer import odometerThread
 class PID:
     def __init__(self, P, I, D):
         self.Kp = P
@@ -19,7 +20,7 @@ class Controller:
     '''
     This is the basic control class for jetbot.
     '''
-    def __init__(self):
+    def __init__(self,Robot):
          ## Create velocity and angular velocity object of PID control ##
         self.velocity = PID(0.6,0,0) #1.7*8/15 #0.6
         self.omega = PID(0.10,0,0.00) # suggest 0.08~0.10
@@ -36,8 +37,9 @@ class Controller:
         self.B = np.array([[b_L], [b_R]])
         MC = (self.M.dot(self.C))
         self.MC_inv = np.linalg.inv(MC)
-        self.__TurnParam = [0,1,0]
+        self.__TurnParam = [1.8,0.1,0.5,0,1.6,0.26,2.4,0]
         self.__StrightParam = [0,1.1,1]
+        self.robot = Robot
     def get_feedback(self, ex, ex_prev, ey, ey_prev, dt):
         # Calculate the feedback
         v = self.velocity.output(ex, ex_prev, dt)
@@ -56,17 +58,19 @@ class Controller:
         dy_in_cm = dy_in_pixel/pixel_per_cm
         return(dy_in_cm)
 
-    def setTurnParam(self,A=0,B=1,C=0):
+    def setTurnParam(self,B=1,C=0,B2_0=1,C2_0=0,B2_1=1,C2_1=0,B3=1,C3=0):
         '''
         Set the turning curve parameters of function:
-        waiting seconds =( A*radians^2 + B*radian + c )/ AngularVelocity
-        
+        For theta>0 [deg] ,waiting seconds =( B*radian + C )/ AngularVelocity
+        For 0>theta<-50 [deg],waiting seconds =(B2_0*radian + C2_0 )/ AngularVelocity
+        For -50>theta [deg],waiting seconds =(B2_1*radian + C2_0 )/ AngularVelocity
+        For abs(theta)>90 [deg],waiting seconds =(B3*radian + C3 )/ AngularVelocity
         Args:
             A: quadratic coefficent
             B: linear coefficent
             C: constant coefficent
         '''
-        self.__TurnParam = [A,B,C]
+        self.__TurnParam = [B,C,B2_0,C2_0,B2_1,C2_1,B3,C3]
 
     def setStrightParam(self,A=0,B=1,C=0):
         '''
@@ -80,16 +84,15 @@ class Controller:
         '''
         self.__StrightParam = [A,B,C]
 
-    def turn(self,Robot,radian,radianbias:float=0):
+    def turn(self,radian,radianbias:float=0):
         '''
         Open-loop control.Turning at constant angular speed in 'least' specific time toward target orientation.
 
         Args:
-            Robot: robot object to control.
             radian: Target clockwise orientation in radians unit, range from -2pi~2pi.
             radianbias: prolong or shorten the turning time.
         '''
-        A,B,C = self.__TurnParam
+        B,C = self.__TurnParam[0:2]
         deg = radian/np.pi*180
         print('Turn '+str(deg)+' deg')
         if not (radian == 0):
@@ -97,27 +100,31 @@ class Controller:
             w = -3
             if abs(radian)>np.pi:
                 turn_radian = -(2*np.pi-abs(radian))
-            if turn_radian < 0 :
+            if abs(turn_radian)>math.pi/2:
+                B,C = self.__TurnParam[6:8]
+            elif turn_radian < 0 :
                 w = -w
+                B,C = self.__TurnParam[2:4]
+                if turn_radian<50/180*math.pi:
+                    B,C = self.__TurnParam[4:6]
             r = abs(turn_radian)
-            seconds = (r*r*A+r*B+C+radianbias)/abs(w)
+            seconds = (r*B+C+radianbias)/abs(w)
             if seconds <0:
                 seconds = 0
             X = np.array([[0],[w]])
             Vot = self.MC_inv.dot(X-self.M.dot(self.B))
             # print('command: turning')
-            Robot.left_motor.value = Vot[0][0]
-            Robot.right_motor.value = Vot[1][0]
+            self.robot.left_motor.value = Vot[0][0]
+            self.robot.right_motor.value = Vot[1][0]
             time.sleep(seconds)
-            Robot.left_motor.value = 0
-            Robot.right_motor.value = 0
+            self.robot.left_motor.value = 0
+            self.robot.right_motor.value = 0
             # print('command: turning is done')
-    def go_stright(self,Robot,distance):
+    def go_stright(self,distance):
         '''
         Open-loop control.Move forward at constant speed in specific time.
 
         Args:
-            Robot: robot object to control.
             distance: unit [cm]
         '''
         print('Go stright '+str(distance)+' cm')
@@ -130,14 +137,14 @@ class Controller:
         X = np.array([[v],[0]])
         Vot = self.MC_inv.dot(X-self.M.dot(self.B))
         # print('command: going straight')
-        Robot.left_motor.value = Vot[0][0]
-        Robot.right_motor.value = Vot[1][0]
+        self.robot.left_motor.value = Vot[0][0]
+        self.robot.right_motor.value = Vot[1][0]
         time.sleep(seconds)
-        Robot.left_motor.value = 0
-        Robot.right_motor.value = 0
+        self.robot.left_motor.value = 0
+        self.robot.right_motor.value = 0
         # print('command: going straight is done')
 
-    def Od_turn(self,Robot,radian):
+    def Od_turn(self,radian):
         '''
         Using odometer to turn toward a specific orientation
         '''
@@ -155,13 +162,13 @@ class Controller:
             dt = 0
             while od.angular_odometer(Vot,dt) <abs(turn_radian):
                 t0 = time.time()
-                Robot.left_motor.value = Vot[0][0]
-                Robot.right_motor.value = Vot[1][0]
+                self.robot.left_motor.value = Vot[0][0]
+                self.robot.right_motor.value = Vot[1][0]
                 dt = time.time()-t0
-            Robot.left_motor.value = 0
-            Robot.right_motor.value = 0
+            self.robot.left_motor.value = 0
+            self.robot.right_motor.value = 0
         
-    def Od_go_stright(self,Robot,distance):
+    def Od_go_stright(self,distance):
         '''
         Using odometer to go to a specific distance
         '''
@@ -172,15 +179,19 @@ class Controller:
         X = np.array([[v],[0]])
         Vot = self.MC_inv.dot(X-self.M.dot(self.B))
         od = odometer(self)
-        dt = 0
-        while od.odometer(Vot,dt) < distance:
-            t0 = time.time()
-            Robot.left_motor.value = Vot[0][0]
-            Robot.right_motor.value = Vot[1][0]
-            dt = time.time()-t0
-        Robot.left_motor.value = 0
-        Robot.right_motor.value = 0
+        odth = odometerThread(odometer=od,odometerTarget=od.odometer)
+        odth.start()
+        # dt = 0
+        # while od.odometer(Vot,dt) < distance:
+        while od.distance < distance:
+            # t0 = time.time()
+            self.robot.left_motor.value = Vot[0][0]
+            self.robot.right_motor.value = Vot[1][0]
+            # dt = time.time()-t0
+        odth.stop()
+        self.robot.left_motor.value = 0
+        self.robot.right_motor.value = 0
 
-    def robotStop(self,Robot):
-        Robot.left_motor.value = 0
-        Robot.right_motor.value = 0
+    def robotStop(self):
+        self.robot.left_motor.value = 0
+        self.robot.right_motor.value = 0
