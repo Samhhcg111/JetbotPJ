@@ -1,3 +1,52 @@
+import time
+import numpy as np
+from threading import Thread
+
+class odometerThread(Thread):
+    '''
+    Odometer threading class.Use this class as a thread to accumulate distance or angle automatically
+    
+    Common use:
+        start() : start accumulation
+        stop()  : stop accumulation
+        reset() : reset odometer
+    '''
+    def __init__(self,odometer,odometerTarget,timestep=0.1):
+        '''
+        Attributes:
+            odometer: the odometer class object
+            odometerTarget: odometer.odometer or odometer.angular_odometer
+            timestep:seconds. Time step to accumulate
+        '''
+        super(odometerThread,self).__init__()
+        self.__stop = False
+        self.odometer = odometer
+        self.Target = odometerTarget
+        self.timestep = timestep
+
+    def run(self) :
+        dt = 0
+        while not self.__stop:
+            t0 = time.time()
+            robot = self.odometer.controller.robot
+            vot_left=robot.left_motor.value
+            vot_right=robot.right_motor.value
+            Vin = np.array([[vot_left], [vot_right]])
+            dt = self.timestep+time.time()-t0
+            self.Target(Vin,dt)
+            time.sleep(self.timestep)
+
+    def reset(self):
+        '''
+        Reset odometer
+        '''
+        self.odometer.reset_odometer()
+
+    def stop(self):
+        '''
+        Stop thread
+        '''
+        self.__stop = True
 
 class odometer:
 
@@ -37,7 +86,9 @@ class odometer:
         ReturnS
             distance: accumulation distance
         '''
+        t0 = time.time()
         self.forward_velocity_calculator(Vin)
+        dt = dt + time.time()-t0
         self.distance += self.velocity*dt
         return self.distance
     def angular_velocity_calculator(self, Vin):
@@ -62,7 +113,9 @@ class odometer:
         ReturnS
             orientation: accumulation angle
         '''
+        t0 = time.time()
         self.angular_velocity_calculator(Vin)
+        dt = dt + time.time()-t0
         self.orientation += abs(self.angular_velocity)*dt
         return self.orientation
 
