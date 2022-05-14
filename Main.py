@@ -176,12 +176,12 @@ if camera.isOpened():
                 if Do_Human_detection:
                     HumandetectThread = threading.Thread(target=HD.Run,args=(undistort_img,))
                     HumandetectThread.start()
-                if Do_Stop_line_detection:
-                    StopLineThread = threading.Thread(target=CD.StopLineColorDetector,args = (
-                        perspectiveTransform_img, 
-                        StopLineROI
-                        ,None,None,None,StopLineHSV.getValue(),))
-                    StopLineThread.start()
+                # if Do_Stop_line_detection:
+                #     StopLineThread = threading.Thread(target=CD.StopLineColorDetector,args = (
+                #         perspectiveTransform_img, 
+                #         StopLineROI
+                #         ,None,None,None,StopLineHSV.getValue(),))
+                #     StopLineThread.start()
                 if Do_Aruco_detection:
                     ArucoThread = threading.Thread(target=Navigator.RunAtIntersection,args=(img,Mycam.camera_matrix,Mycam.dist_coeff,30,))
                     ArucoThread.start()
@@ -236,9 +236,6 @@ if camera.isOpened():
                 #         Stage.setPause()
                 #         # Stage.nextStage()
                 
-                
-
-
                 
             '''
             Stage 2: Calulate paths and go to the position in front of the stop line
