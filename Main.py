@@ -12,6 +12,7 @@ from lib.Navigator import Navigator as NV
 from lib.ColorDetector import ColorDetector
 from lib.human_detection_class import HumanDetector
 from lib.HSV_and_Area_Data_Slider import HSV_and_Area_Setting as HSV_DATA
+from lib.odometer import odometer 
 import sys
 sys.path.append('../')
 from jetbot.robot import Robot
@@ -64,6 +65,7 @@ if camera.isOpened():
     HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
     TrafficLightHSV = HSV_DATA(dataPath,'TrafficLightHSV')
+    frame = 0
 
     '''
     Common setting
@@ -82,12 +84,41 @@ if camera.isOpened():
     '''
     # controller.setStrightParam(B=1.1,C=1)
     # controller.setTurnParam(B=2,C=0)
-    
+
+    '''
+    frequency condition setting
+    '''
+    frame_divisor_Lane_following = 1
+    frame_divisor_Human_detection = 2
+    frame_divisor_Stop_line_detection = 1
+    frame_divisor_Aruco_detection = 1
+    frame_reset = 30
+
+    '''
+    distance condition setting
+    '''
+    Main_odometer = LF.odometer
+    # distance_Lane_following = 0
+    distance_Human_detection = [30,50] #boundaries [cm]
+    distance_Stop_line_detection = 0
+    distance_Aruco_detection = 75
+    '''
+    condition swtich
+    '''
+    Do_Lane_following = True
+    Do_Human_detection = False
+    Do_Stop_line_detection = False
+    Do_Aruco_detection = False
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
         start_time=time.time()
         # Read from camera and display on windows
         ret, img= camera.read()
+        #reset frame if frame is greater than 60
+        if frame > frame_reset:
+            frame = 0
+        #frame calculate
+        frame = frame + 1
         if not ret:
             print('[Main] img read error')
             IMG_capture_Error_count+=1
@@ -107,48 +138,106 @@ if camera.isOpened():
             Stage 1
             '''
             if Stage.isStage(1) and not Stop:
-                # Start threads #
-                HumandetectThread = threading.Thread(target=HD.Run,args=(undistort_img,))
-                HumandetectThread.start()
-                StopLineThread = threading.Thread(target=CD.StopLineColorDetector,args = (
-                    perspectiveTransform_img, 
-                    StopLineROI
-                ,None,None,None,StopLineHSV.getValue(),))
-                StopLineThread.start()
+                
+                '''
+                condition determination
+                '''
+                if frame % frame_divisor_Lane_following == 0 :
+                    Do_Lane_following = True
+                else:
+                    Do_Lane_following = False
+                
+                if frame % frame_divisor_Human_detection == 0 :
+                    if  Main_odometer.distance >= distance_Human_detection[0] and  Main_odometer.distance <= distance_Human_detection[1]:                        
+                        Do_Human_detection = True
+                    else :
+                        Do_Human_detection = False
+                else: 
+                    Do_Human_detection = False
+                    HD.Stop()
 
+                # if frame % frame_divisor_Stop_line_detection == 0 :
+                #     if Main_odometer.distance == distance_Stop_line_detection: 
+                #         Do_Stop_line_detection = True
+                #     else:
+                #         Do_Stop_line_detection = False
+                # else:
+                #     Do_Stop_line_detection = False
+
+                if frame % frame_divisor_Aruco_detection == 0 :
+                    if Main_odometer.distance >= distance_Aruco_detection:
+                        Do_Aruco_detection = True
+                    else:
+                        Do_Aruco_detection = False
+                else:
+                    Do_Aruco_detection = False
+                
+                # Start threads #
+                if Do_Human_detection:
+                    HumandetectThread = threading.Thread(target=HD.Run,args=(undistort_img,))
+                    HumandetectThread.start()
+                if Do_Stop_line_detection:
+                    StopLineThread = threading.Thread(target=CD.StopLineColorDetector,args = (
+                        perspectiveTransform_img, 
+                        StopLineROI
+                        ,None,None,None,StopLineHSV.getValue(),))
+                    StopLineThread.start()
+                if Do_Aruco_detection:
+                    ArucoThread = threading.Thread(target=Navigator.RunAtIntersection,args=(img,Mycam.camera_matrix,Mycam.dist_coeff,30,))
+                    ArucoThread.start()
+                
                 '''
                 Lane following
                 '''
-                outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
-                                   right_turning_mode_distance_threshold = 15)
-                outputIMG = img
-                if LF.right_turn_mode:  # Open loop right turn motion
-                    LF.Stop()
-                    controller.go_stright(14)
-                    controller.turn(np.deg2rad(70))
-                    controller.go_stright(7.5)
+                if Do_Lane_following: 
+                    outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
+                                    right_turning_mode_distance_threshold = 15)
+                    outputIMG = img
+                    if LF.right_turn_mode:  # Open loop right turn motion
+                        LF.Stop()
+                        controller.go_stright(14)
+                        controller.turn(np.deg2rad(70))
+                        controller.go_stright(7.5)
 
                 '''
                 Human detection
                 '''
-                HumandetectThread.join()    #wait for detection
-                # outputIMG =HD.detectIMG
-                # HD.Run(img)
-                if HD.isDetectHuman:
-                    HD.do_human_aviodance(Robot=robot)
-                    HD.Stop()
+                if Do_Human_detection: 
+                    HumandetectThread.join()    #wait for detection
+                    # outputIMG =HD.detectIMG
+                    # HD.Run(img)
+                    if HD.isDetectHuman:
+                        HD.do_human_aviodance(Robot=robot)
+                        HD.Stop()
+
+                '''
+                Aruco detection
+                '''
+                if Do_Aruco_detection:
+                    ArucoThread.join()
+                    if Navigator.atIntersection:
+                        if CD.StopLineColor:
+                            print('[Main]Intersection detect')
+                            LF.Stop()
+                            HD.Stop()
+                            Stage.setPause()
+                            # Stage.nextStage()
 
                 '''
                 Stop line detection:
                 '''
-                StopLineThread.join()   # wait fot Stop Line detection
-                # outputIMG = CD.stopLineIMG
-                if CD.StopLineColor:
-                    print('[Main]Intersection detect')
-                    LF.Stop()
-                    HD.Stop()
-                    Stage.setPause()
-                    # Stage.nextStage()
+                # if Do_Stop_line_detection:
+                #     StopLineThread.join()   # wait fot Stop Line detection
+                #     # outputIMG = CD.stopLineIMG
+                #     if CD.StopLineColor:
+                #         print('[Main]Intersection detect')
+                #         LF.Stop()
+                #         HD.Stop()
+                #         Stage.setPause()
+                #         # Stage.nextStage()
+                
+                
+
 
                 
             '''
