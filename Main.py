@@ -56,7 +56,7 @@ if camera.isOpened():
     '''
     robot = Robot()
     controller = Controller(Robot=robot)
-    LF = LandFollower(robot,controller)
+    LF = LandFollower(controller)
     Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
@@ -88,10 +88,10 @@ if camera.isOpened():
     '''
     frequency condition setting
     '''
-    frame_divisor_Lane_following = 1
-    frame_divisor_Human_detection = 2
+    frame_divisor_Lane_following = 2
+    frame_divisor_Human_detection = 3
     frame_divisor_Stop_line_detection = 1
-    frame_divisor_Aruco_detection = 1
+    frame_divisor_Aruco_detection = 4
     frame_reset = 30
 
     '''
