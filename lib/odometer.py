@@ -91,6 +91,21 @@ class odometer:
         dt = dt + time.time()-t0
         self.distance += self.velocity*dt
         return self.distance
+    def odometerCalibrate(self, Vin, dt,c):
+        '''
+        Forward travel distance calculator
+        Args:
+            Vin:  Motor input value in 2*1 np array; that is, np.array([[vot_left], [vot_right]])
+            dt:   Time difference between two frames
+            c:   dt = dt * c
+        ReturnS
+            distance: accumulation distance
+        '''
+        t0 = time.time()
+        self.forward_velocity_calculator(Vin)
+        dt = dt + time.time()-t0
+        self.distance += self.velocity*dt*c
+        return self.distance
     def angular_velocity_calculator(self, Vin):
         '''
         Angular speed calculator

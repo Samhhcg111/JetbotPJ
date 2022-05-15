@@ -194,7 +194,7 @@ class Navigator:
             self.intersection_id,self.IntersectionPos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
             Pos = self.IN.getCameraPosition(src_img,mtx,dist,corners,ids, self.intersection_id)
             distance = self.__distance(Pos[0:2])
-            # print('[Navigator] distance '+str(distance))
+            print('[Navigator] distance '+str(distance))
             if distance < Critical_distance :
                 self.atIntersection = True
                 # print('[Navigator] atIntersection True')

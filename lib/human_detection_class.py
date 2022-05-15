@@ -40,9 +40,9 @@ class HumanDetector:
         # resizing for faster detection
         frame = cv2.resize(frame, (640, 480))
         # take middle of frame
-        frame = frame[0:480, 200:440]
+        frame = frame[0:480, 200:500]
         # using a greyscale picture, also for faster detection
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         # detect people in the image
         # returns the bounding boxes for the detected objects
@@ -56,14 +56,14 @@ class HumanDetector:
                             (0, 255, 0), 2)
             area = (xA-xB)*(yA-yB)  
             print ('area = ', area)
-            if area > 25000:
+            if area > 23000:
                 self.human_detection_count += 1
                 print("HumanDetection: true")           
             else:        
                 print("HumanDetection: no")  
                 
 
-        if self.human_detection_count > 2:
+        if self.human_detection_count > 0:
             self.isDetectHuman = True
 
         output = frame

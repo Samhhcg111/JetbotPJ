@@ -179,7 +179,7 @@ class LandFollower:
         self.pid_count = 0
         self.robot.left_motor.value  = 0
         self.robot.right_motor.value = 0
-
+        self.odometer.reset_odometer()
 
     
     def RightTrakingChecker(self, left_fit, dt, velocity, distance_required=20):
@@ -264,8 +264,9 @@ class LandFollower:
             # vot_right = 0
 
             # Calculate forward velocity
-            velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
-            
+            # velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
+            self.odometer.odometerCalibrate(np.array([[vot_left], [vot_right]]),dt=dt,c=0.86)
+            velocity = self.odometer.velocity
             # Check if entering right turning mode is needed
             self.RightTrakingChecker(left_fit, dt, velocity, distance_required=right_turning_mode_distance_threshold)
             if self.right_turn_mode:

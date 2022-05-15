@@ -88,18 +88,18 @@ if camera.isOpened():
     '''
     frequency condition setting
     '''
-    frame_divisor_Lane_following = 2
-    frame_divisor_Human_detection = 3
+    frame_divisor_Lane_following = 1
+    frame_divisor_Human_detection = 1
     frame_divisor_Stop_line_detection = 1
-    frame_divisor_Aruco_detection = 4
-    frame_reset = 30
+    frame_divisor_Aruco_detection = 1
+    frame_reset = 24
 
     '''
     distance condition setting
     '''
     Main_odometer = LF.odometer
     # distance_Lane_following = 0
-    distance_Human_detection = [30,50] #boundaries [cm]
+    distance_Human_detection = [15,65,140,300] #boundaries [cm]
     distance_Stop_line_detection = 0
     distance_Aruco_detection = 75
     '''
@@ -148,13 +148,18 @@ if camera.isOpened():
                     Do_Lane_following = False
                 
                 if frame % frame_divisor_Human_detection == 0 :
-                    if  Main_odometer.distance >= distance_Human_detection[0] and  Main_odometer.distance <= distance_Human_detection[1]:                        
+                    if Main_odometer.distance >= distance_Human_detection[2] and  Main_odometer.distance <= distance_Human_detection[3]:
+                        Do_Human_detection = True
+                    elif  Main_odometer.distance >= distance_Human_detection[0] and  Main_odometer.distance <= distance_Human_detection[1]:                        
                         Do_Human_detection = True
                     else :
                         Do_Human_detection = False
                 else: 
                     Do_Human_detection = False
                     HD.Stop()
+                # Test
+                # Do_Human_detection = True
+                # Do_Lane_following =False
 
                 # if frame % frame_divisor_Stop_line_detection == 0 :
                 #     if Main_odometer.distance == distance_Stop_line_detection: 
@@ -183,16 +188,28 @@ if camera.isOpened():
                 #         ,None,None,None,StopLineHSV.getValue(),))
                 #     StopLineThread.start()
                 if Do_Aruco_detection:
-                    ArucoThread = threading.Thread(target=Navigator.RunAtIntersection,args=(img,Mycam.camera_matrix,Mycam.dist_coeff,30,))
+                    ArucoThread = threading.Thread(target=Navigator.RunAtIntersection,args=(img,Mycam.camera_matrix,Mycam.dist_coeff,45,))
                     ArucoThread.start()
                 
+                '''
+                Human detection
+                '''
+                if Do_Human_detection: 
+                    HumandetectThread.join()    #wait for detection
+                    outputIMG =HD.detectIMG
+                    HD.Run(img)
+                    if HD.isDetectHuman:
+                        HD.do_human_aviodance()
+                        HD.Stop()
+            
                 '''
                 Lane following
                 '''
                 if Do_Lane_following: 
-                    outputIMG = LF.Run(perspectiveTransform_img, timedifferent, 
+                    LF.Run(perspectiveTransform_img, timedifferent, 
                                     right_turning_mode_distance_threshold = 15)
-                    outputIMG = img
+                    if not Do_Human_detection:
+                        outputIMG = img
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
                         controller.go_stright(14)
@@ -200,28 +217,16 @@ if camera.isOpened():
                         controller.go_stright(7.5)
 
                 '''
-                Human detection
-                '''
-                if Do_Human_detection: 
-                    HumandetectThread.join()    #wait for detection
-                    # outputIMG =HD.detectIMG
-                    # HD.Run(img)
-                    if HD.isDetectHuman:
-                        HD.do_human_aviodance(Robot=robot)
-                        HD.Stop()
-
-                '''
                 Aruco detection
                 '''
                 if Do_Aruco_detection:
                     ArucoThread.join()
                     if Navigator.atIntersection:
-                        if CD.StopLineColor:
-                            print('[Main]Intersection detect')
-                            LF.Stop()
-                            HD.Stop()
-                            Stage.setPause()
-                            # Stage.nextStage()
+                        print('[Main]Intersection detect')
+                        LF.Stop()
+                        HD.Stop()
+                        # Stage.setPause()
+                        Stage.nextStage()
 
                 '''
                 Stop line detection:
@@ -236,7 +241,8 @@ if camera.isOpened():
                 #         Stage.setPause()
                 #         # Stage.nextStage()
                 
-                
+            
+
             '''
             Stage 2: Calulate paths and go to the position in front of the stop line
             '''
@@ -256,16 +262,16 @@ if camera.isOpened():
                 '''
                 Stop line navigation
                 '''
-                stop_line_img,stopLineMask = CD.StopLineColorDetector (
-                    perspectiveTransform_img, 
-                    ROI =IntersectionStopLineROI,
-                    HSV_Data=StopLineHSV.getValue()
-                )
-                outputIMG = stop_line_img
-                if CD.StopLineColor:
-                    print('[Main]Stopline detect,recalculate paths')
-                    outputIMG=Navigator.ReCalculatePathsWithStopLine(perspectiveTransform_img,stopLineMask)
-                    Stage.setPause()
+                # stop_line_img,stopLineMask = CD.StopLineColorDetector (
+                #     perspectiveTransform_img, 
+                #     ROI =IntersectionStopLineROI,
+                #     HSV_Data=StopLineHSV.getValue()
+                # )
+                # outputIMG = stop_line_img
+                # if CD.StopLineColor:
+                #     print('[Main]Stopline detect,recalculate paths')
+                #     outputIMG=Navigator.ReCalculatePathsWithStopLine(perspectiveTransform_img,stopLineMask)
+                #     Stage.setPause()
 
                 '''
                 Traffic Light detection
@@ -279,7 +285,7 @@ if camera.isOpened():
                 # outputIMG = Traffic_light_marked_img
 
                 # if not CD.RedLight and CD.YellowLight:
-                # Stage.nextStage()
+                Stage.nextStage()
                 
             '''
             Stage 4: go to the next road
@@ -288,7 +294,7 @@ if camera.isOpened():
                     Navigator.GotoEntry(controller=controller)
                     Navigator.Stop()
                     Stage.nextStage()
-
+                    start_time = time.time()
             '''
             Function testing stage: remember to set the total_stage to the number '5' and use
             the setStage(5) function to active this stage.
@@ -311,6 +317,9 @@ if camera.isOpened():
                 UI_undistort_img=undistort_img.copy()
                 outputIMG=MyCam.visualize_Ref_frame(UI_undistort_img)
             cv2.putText(outputIMG,str(fps),(20,20),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+            cv2.putText(outputIMG,str('Odometer : ')+str(Main_odometer.distance),(60,20),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),1,cv2.LINE_AA)
+            cv2.putText(outputIMG,str('Aruco detect : ')+str(Do_Aruco_detection),(60,40),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),1,cv2.LINE_AA)
+            cv2.putText(outputIMG,str('Human detect : ')+str(Do_Human_detection),(60,60),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),1,cv2.LINE_AA)
             cv2.imshow("output",outputIMG)
         keyCode = cv2.waitKey(1)
 
