@@ -37,7 +37,7 @@ class Controller:
         self.B = np.array([[b_L], [b_R]])
         MC = (self.M.dot(self.C))
         self.MC_inv = np.linalg.inv(MC)
-        self.__TurnParam = [1.8,0.1,0.5,0,1.6,0.26,2.4,0]
+        self.__TurnParam = [1.7,0,1.2,0,2,0,2.3,0]
         self.__StrightParam = [0,1.1,1]
         self.robot = Robot
     def get_feedback(self, ex, ex_prev, ey, ey_prev, dt):
@@ -61,10 +61,12 @@ class Controller:
     def setTurnParam(self,B=1,C=0,B2_0=1,C2_0=0,B2_1=1,C2_1=0,B3=1,C3=0):
         '''
         Set the turning curve parameters of function:
-        For theta>0 [deg] ,waiting seconds =( B*radian + C )/ AngularVelocity
-        For 0>theta<-50 [deg],waiting seconds =(B2_0*radian + C2_0 )/ AngularVelocity
-        For -50>theta [deg],waiting seconds =(B2_1*radian + C2_0 )/ AngularVelocity
+
+        For theta<0 [deg] ,waiting seconds =( B*radian + C )/ AngularVelocity \n
+        For 0<theta<50 [deg],waiting seconds =(B2_0*radian + C2_0 )/ AngularVelocity \n
+        For 50<theta [deg],waiting seconds =(B2_1*radian + C2_0 )/ AngularVelocity \n
         For abs(theta)>90 [deg],waiting seconds =(B3*radian + C3 )/ AngularVelocity
+
         Args:
             A: quadratic coefficent
             B: linear coefficent
@@ -92,7 +94,6 @@ class Controller:
             radian: Target clockwise orientation in radians unit, range from -2pi~2pi.
             radianbias: prolong or shorten the turning time.
         '''
-        B,C = self.__TurnParam[0:2]
         deg = radian/np.pi*180
         print('Turn '+str(deg)+' deg')
         if not (radian == 0):
@@ -100,13 +101,15 @@ class Controller:
             w = -3
             if abs(radian)>np.pi:
                 turn_radian = -(2*np.pi-abs(radian))
-            if abs(turn_radian)>math.pi/2:
-                B,C = self.__TurnParam[6:8]
-            elif turn_radian < 0 :
+            if turn_radian < 0 :
                 w = -w
+                B,C = self.__TurnParam[0:2]
+            if turn_radian > 0:
                 B,C = self.__TurnParam[2:4]
-                if turn_radian<50/180*math.pi:
+                if turn_radian>50/180*math.pi:
                     B,C = self.__TurnParam[4:6]
+            if abs(turn_radian)>=math.pi/2:
+                B,C = self.__TurnParam[6:8]
             r = abs(turn_radian)
             seconds = (r*B+C+radianbias)/abs(w)
             if seconds <0:
