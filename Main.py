@@ -56,12 +56,12 @@ if camera.isOpened():
     '''
     robot = Robot()
     controller = Controller(Robot=robot)
-    LF = LandFollower(controller)
+    CD = ColorDetector()
+    LF = LandFollower(Controller=controller)
     Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,1,4,5)
-    CD = ColorDetector()
     HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
     TrafficLightHSV = HSV_DATA(dataPath,'TrafficLightHSV')
@@ -206,10 +206,10 @@ if camera.isOpened():
                 Lane following
                 '''
                 if Do_Lane_following: 
-                    LF.Run(perspectiveTransform_img, timedifferent, 
-                                    right_turning_mode_distance_threshold = 15)
+                    Lane_Following_img = LF.Run(perspectiveTransform_img, timedifferent, 
+                                    right_turning_mode_distance_threshold = 15, Stop=True)
                     if not Do_Human_detection:
-                        outputIMG = img
+                        outputIMG = Lane_Following_img
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
                         controller.go_stright(14)

@@ -10,8 +10,7 @@ class ColorDetector:
                             ])
         ):
 
-            # Since an image is a multi-directional array containing the relative intensities of each pixel in the image, we can use frame.shape to return a tuple: [number of rows, number of columns, number of channels] of the dimensions of the frame
-            # frame.shape[0] give us the number of rows of pixels the frame has. Since height begins from 0 at the top, the y-coordinate of the bottom of the frame is its height
+            # [number of rows, number of columns, number of channels]
             height = frame.shape[0]
             width = frame.shape[1]
 
@@ -30,7 +29,10 @@ class ColorDetector:
         self.GreenLingt = False
         self.YellowLight = False
         self.StopLineColor = False
+        self.YellowLane = False
+        self.WhiteLane = False
         self.stopLineIMG = None
+        self.lane_color_image = None
 
     def TrafficLightDetector (
         self,
@@ -104,15 +106,7 @@ class ColorDetector:
 
         return imageFrame
 
-    
-    # def StopLineColorDetector (
-    #     self,
-    #     image,
-    #     ROI = np.array([    [(210, 250), (210, 342), (263, 399), (430, 399), (500,305), (500, 250)]    ]),
-    #     stop_line_color_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
-    #     stop_line_color_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
-    #     area_lower_limit = 1500,
-    # ):
+
     def StopLineColorDetector (
         self,
         image,
@@ -169,6 +163,95 @@ class ColorDetector:
                 self.StopLineColor = True
         self.stopLineIMG = imageFrame
         return imageFrame,mask
+
+
+    def LaneColorDetector (
+        self,
+        image,  # Undistorted image only
+        ROI,
+        lane_yellow_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
+        lane_yellow_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
+        lane_yellow_area_lower_limit = 1500,
+        lane_yellow_HSV_Data = [170,180,60,120,111,180,1500],
+        lane_white_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
+        lane_white_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
+        lane_white_area_lower_limit = 1500,
+        lane_white_HSV_Data = [170,180,60,120,111,180,1500]
+    ):
+        '''
+            Indentify yelow lane at first
+        '''
+        if lane_yellow_HSV_Data is not None:
+            lane_yellow_lower  = np.array([lane_yellow_HSV_Data[0], lane_yellow_HSV_Data[2], lane_yellow_HSV_Data[4]], np.uint8)
+            lane_yellow_upper  = np.array([lane_yellow_HSV_Data[1], lane_yellow_HSV_Data[3], lane_yellow_HSV_Data[5]], np.uint8)
+            lane_yellow_area_lower_limit = lane_yellow_HSV_Data[6]
+
+        imageFrame = image.copy()
+        # Input image
+        segmentedFrame = ColorDetector.do_segment(imageFrame, polygons=ROI) 
+        hsvFrame = cv2.cvtColor(segmentedFrame, cv2.COLOR_BGR2HSV)
+
+        # Define mask
+        mask = cv2.inRange(hsvFrame,  lane_yellow_lower, lane_yellow_upper)
+
+        # Morphological Transform, Dilation for each color and bitwise and operator between image frame and mask determine to detect only that particular color.
+        kernal = np.ones((5,5), "uint8")
+        mask = cv2.dilate(mask, kernal)
+        res = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=mask)
+
+        # Set lane colors False as defualt
+        self.YellowLane = False
+        self.WhiteLane = False
+
+        #Creating contour to track red color
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for pic, contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+            if area > lane_yellow_area_lower_limit:
+                x, y, w, h = cv2.boundingRect(contour)
+                imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
+                cv2.putText(imageFrame, "Yellow lane", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
+                self.YellowLane = True
+                self.lane_color_image = imageFrame
+                return imageFrame, mask
+        # self.lane_color_image = imageFrame
+        # return imageFrame,mask
+
+        '''
+            If yellow lane is not found, identify white lane
+        '''
+        if lane_white_HSV_Data is not None:
+            lane_white_lower  = np.array([lane_white_HSV_Data[0], lane_white_HSV_Data[2], lane_white_HSV_Data[4]], np.uint8)
+            lane_white_upper  = np.array([lane_white_HSV_Data[1], lane_white_HSV_Data[3], lane_white_HSV_Data[5]], np.uint8)
+            lane_white_area_lower_limit = lane_white_HSV_Data[6]
+
+        # Define mask
+        mask = cv2.inRange(hsvFrame,  lane_white_lower, lane_white_upper)
+
+        # Morphological Transform, Dilation for each color and bitwise and operator between image frame and mask determine to detect only that particular color.
+        kernal = np.ones((5,5), "uint8")
+        mask = cv2.dilate(mask, kernal)
+        res = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=mask)
+
+        # Set lane colors False as defualt
+        self.WhiteLane = False
+
+        #Creating contour to track red color
+        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for pic, contour in enumerate(contours):
+            area = cv2.contourArea(contour)
+            if area > lane_white_area_lower_limit:
+                x, y, w, h = cv2.boundingRect(contour)
+                imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
+                cv2.putText(imageFrame, "White lane", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
+                self.WhiteLane = True
+                self.lane_color_image = imageFrame
+                return imageFrame, mask
+
+        '''
+            Return original image if find nothing
+        '''
+        return imageFrame
 
 
 
