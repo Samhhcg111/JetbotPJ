@@ -57,7 +57,7 @@ if camera.isOpened():
     robot = Robot()
     controller = Controller(Robot=robot)
     CD = ColorDetector()
-    LF = LandFollower(Controller=controller)
+    LF = LandFollower(Controller=controller, ColorDetector=CD)
     Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
@@ -65,11 +65,16 @@ if camera.isOpened():
     HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
     TrafficLightHSV = HSV_DATA(dataPath,'TrafficLightHSV')
+    LaneYellowHSV = HSV_DATA(dataPath, 'LaneYellowHSV')
     frame = 0
 
     '''
     Common setting
     '''
+    # Create sliders for lane yellow detection setting
+    LaneYellowHSV.setValue([5,30,30,150,220,255,100])
+    #LaneYellowHSV.slider(window_name='output')
+
     ## Create Sliders for HSV and area setting
     # HSV_and_Area.slider(window_name="output")
     ## StopLine setting ##
@@ -206,10 +211,17 @@ if camera.isOpened():
                 Lane following
                 '''
                 if Do_Lane_following: 
-                    Lane_Following_img = LF.Run(perspectiveTransform_img, timedifferent, 
-                                    right_turning_mode_distance_threshold = 15, Stop=True)
-                    if not Do_Human_detection:
-                        outputIMG = Lane_Following_img
+                    Lane_Following_img = LF.Run(
+                        perspectiveTransform_img = perspectiveTransform_img, 
+                        dt = timedifferent,
+                        HSV_Data = LaneYellowHSV.getValue(),
+                        right_turning_mode_distance_threshold = 15, 
+                        Stop=False
+                    )
+                    outputIMG = Lane_Following_img
+                    LaneYellowHSV.saveData() # Save data after using slider
+                    # if not Do_Human_detection:
+                    #     outputIMG = Lane_Following_img
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
                         controller.go_stright(14)

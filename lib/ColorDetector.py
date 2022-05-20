@@ -169,12 +169,12 @@ class ColorDetector:
         self,
         image,  # Undistorted image only
         ROI,
-        lane_yellow_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
-        lane_yellow_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
-        lane_yellow_area_lower_limit = 1500,
-        lane_yellow_HSV_Data = [170,180,60,120,111,180,1500],
-        lane_white_lower = np.array([170, 60, 111], np.uint8),  # 136, 87, 111
-        lane_white_upper = np.array([180, 120, 180], np.uint8), # 180, 255, 255
+        lane_yellow_lower = np.array([5, 30, 220], np.uint8), 
+        lane_yellow_upper = np.array([30, 150, 255], np.uint8),
+        lane_yellow_area_lower_limit = 100,
+        lane_yellow_HSV_Data = [5,30,30,150,220,255,100],
+        lane_white_lower = np.array([170, 60, 111], np.uint8),
+        lane_white_upper = np.array([180, 120, 180], np.uint8), 
         lane_white_area_lower_limit = 1500,
         lane_white_HSV_Data = [170,180,60,120,111,180,1500]
     ):
@@ -220,37 +220,38 @@ class ColorDetector:
         '''
             If yellow lane is not found, identify white lane
         '''
-        if lane_white_HSV_Data is not None:
-            lane_white_lower  = np.array([lane_white_HSV_Data[0], lane_white_HSV_Data[2], lane_white_HSV_Data[4]], np.uint8)
-            lane_white_upper  = np.array([lane_white_HSV_Data[1], lane_white_HSV_Data[3], lane_white_HSV_Data[5]], np.uint8)
-            lane_white_area_lower_limit = lane_white_HSV_Data[6]
+        # if lane_white_HSV_Data is not None:
+        #     lane_white_lower  = np.array([lane_white_HSV_Data[0], lane_white_HSV_Data[2], lane_white_HSV_Data[4]], np.uint8)
+        #     lane_white_upper  = np.array([lane_white_HSV_Data[1], lane_white_HSV_Data[3], lane_white_HSV_Data[5]], np.uint8)
+        #     lane_white_area_lower_limit = lane_white_HSV_Data[6]
 
-        # Define mask
-        mask = cv2.inRange(hsvFrame,  lane_white_lower, lane_white_upper)
+        # # Define mask
+        # mask = cv2.inRange(hsvFrame,  lane_white_lower, lane_white_upper)
 
-        # Morphological Transform, Dilation for each color and bitwise and operator between image frame and mask determine to detect only that particular color.
-        kernal = np.ones((5,5), "uint8")
-        mask = cv2.dilate(mask, kernal)
-        res = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=mask)
+        # # Morphological Transform, Dilation for each color and bitwise and operator between image frame and mask determine to detect only that particular color.
+        # kernal = np.ones((5,5), "uint8")
+        # mask = cv2.dilate(mask, kernal)
+        # res = cv2.bitwise_and(segmentedFrame, segmentedFrame, mask=mask)
 
-        # Set lane colors False as defualt
-        self.WhiteLane = False
+        # # Set lane colors False as defualt
+        # self.WhiteLane = False
 
-        #Creating contour to track red color
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for pic, contour in enumerate(contours):
-            area = cv2.contourArea(contour)
-            if area > lane_white_area_lower_limit:
-                x, y, w, h = cv2.boundingRect(contour)
-                imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
-                cv2.putText(imageFrame, "White lane", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
-                self.WhiteLane = True
-                self.lane_color_image = imageFrame
-                return imageFrame, mask
+        # #Creating contour to track red color
+        # contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # for pic, contour in enumerate(contours):
+        #     area = cv2.contourArea(contour)
+        #     if area > lane_white_area_lower_limit:
+        #         x, y, w, h = cv2.boundingRect(contour)
+        #         imageFrame = cv2.rectangle(imageFrame, (x,y), (x+w, y+h), (0,0,255), 2)
+        #         cv2.putText(imageFrame, "White lane", (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255))
+        #         self.WhiteLane = True
+        #         self.lane_color_image = imageFrame
+        #         return imageFrame, mask
 
         '''
             Return original image if find nothing
         '''
+        self.lane_color_image = imageFrame
         return imageFrame
 
 

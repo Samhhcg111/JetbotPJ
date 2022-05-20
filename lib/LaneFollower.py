@@ -1,7 +1,8 @@
 import numpy as np
 import cv2
 from lib.odometer import odometer
-from lib.ColorDetector import ColorDetector
+# from lib.ColorDetector import ColorDetector
+# from lib.HSV_and_Area_Data_Slider import HSV_and_Area_Setting
 
 class LandFollower:
 
@@ -168,14 +169,14 @@ class LandFollower:
                 return (dx_in_cm, dy_in_cm)
 
 
-    def __init__(self, Controller):
+    def __init__(self, Controller, ColorDetector):
         self.controller = Controller
         self.pid_count = 0
         self.robot = self.controller.robot
         self.dl_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
         self.right_turn_mode = False
         self.odometer = odometer(self.controller)
-        self.color_detector = ColorDetector()
+        self.color_detector = ColorDetector
 
     def Stop(self):
         self.pid_count = 0
@@ -219,8 +220,9 @@ class LandFollower:
 
     def lane_color_finder(
         self, 
-        undistorted_image,
+        perspective_transformed_image,
         lane_all_pts,
+        HSV_Data = [170,180,60,120,111,180,1500],
         offset = 40,
         step = 40
         ):
@@ -235,8 +237,9 @@ class LandFollower:
         boundary = np.concatenate((left_boundary, right_boundary), axis=1)
         # Find the lane color whin boundary
         self.color_detector.LaneColorDetector(
-            image=undistorted_image,
-            ROI=boundary
+            image = perspective_transformed_image,
+            ROI=boundary,
+            lane_yellow_HSV_Data = HSV_Data
         )
         return self.color_detector.YellowLane
         
@@ -246,9 +249,11 @@ class LandFollower:
     def Run(
         self, 
         perspectiveTransform_img, 
-        undistorted_image, dt, 
+        dt, 
+        HSV_Data = [5,30,30,150,220,255,100],
         right_turning_mode_distance_threshold=20,
         pixel_per_cm = 9.3, 
+        lane_correction_gain=0.5,
         Stop=False
         ):
         '''
@@ -272,16 +277,20 @@ class LandFollower:
                 White: False 
         '''
         left_lane_yellow = self.lane_color_finder(
-            undistorted_image = undistorted_image, 
-            lane_all_pts = left_line_pts 
+            perspective_transformed_image = perspectiveTransform_img, 
+            lane_all_pts = left_line_pts,
+            HSV_Data = HSV_Data
             )
         right_lane_yellow = False
 
         if not left_lane_yellow:
             right_lane_yellow = self.lane_color_finder(
-            undistorted_image = undistorted_image, 
-            lane_all_pts = right_line_pts
+            perspective_transformed_image = perspectiveTransform_img, 
+            lane_all_pts = right_line_pts,
+            HSV_Data = HSV_Data 
             )
+        else:
+            print('left lane is yellow')
 
         '''
             Determine the centerline according to the color of left and right lane
@@ -289,17 +298,19 @@ class LandFollower:
         '''
         if not left_lane_yellow:
             if right_lane_yellow: # right lane is also yellow => at the oppsite lane
-                center_line_pts = center_line_pts - np.array([ [int(15*pixel_per_cm), y] for y in range(201,401) ])
+                center_line_pts = center_line_pts + np.array([ [int(15*pixel_per_cm*lane_correction_gain),  0] for y in range(200,401) ])
+                print('right lane is yellow')
             else: # right lane is white => centerline is yellow line
-                center_line_pts = center_line_pts - np.array([ [int(7.5*pixel_per_cm), y] for y in range(201,401) ])
-
+                center_line_pts = center_line_pts + np.array([ [int(7.5*pixel_per_cm*lane_correction_gain), 0] for y in range(200,401) ])
+                print('nothing yellow')
+        #print(center_line_pts)
         
         # Plot the left, center, and right lane
         binary_img_segment_lane_detection = cv2.polylines(binary_img_segment, [center_line_pts], False, (255,0,0), 1)
         binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
         binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
         outputIMG=binary_img_segment_lane_detection_left_right
-
+        
         # Calculate dx and dy
         dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm, pixel_per_cm=pixel_per_cm)
         ex = dx_in_cm
@@ -353,4 +364,7 @@ class LandFollower:
         cv2.putText(output,'ex: '+str(ex)+' ey: '+str(ey),(50,80),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
         cv2.putText(output,'vot_lef: '+str(vot_left)+' vot_right: '+str(vot_right),(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
         
+        # Temp
+        #outputIMG = self.color_detector.lane_color_image
+
         return outputIMG
