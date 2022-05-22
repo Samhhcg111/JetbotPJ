@@ -163,7 +163,8 @@ class Navigator:
 
     def GotoEntry(self,controller):
         controller.turn(self.crossPath[2])
-        controller.go_stright(self.crossPath[3]+4)
+        # controller.go_stright(self.crossPath[3]+4)
+        controller.go_stright(self.crossPath[3])
         controller.turn(self.crossPath[4],math.radians(-5))
         controller.go_stright(self.crossPath[5])
       

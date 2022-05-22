@@ -83,7 +83,7 @@ if camera.isOpened():
     Controller setting
     '''
     # controller.setStrightParam(B=1.1,C=1)
-    # controller.setTurnParam(B=2,C=0)
+    controller.setTurnParam(1.7+0.2,0,1.2+0.2,0,2+0.2,0,2.3,0)
 
     '''
     frequency condition setting
@@ -99,9 +99,9 @@ if camera.isOpened():
     '''
     Main_odometer = LF.odometer
     # distance_Lane_following = 0
-    distance_Human_detection = [15,65,140,300] #boundaries [cm]
-    distance_Stop_line_detection = 0
-    distance_Aruco_detection = 75
+    # distance_Stop_line_detection = 0
+    distance_Human_detection = [13,60,140,300] #boundaries [cm]
+    distance_Aruco_detection = 60
     '''
     condition swtich
     '''
@@ -158,7 +158,7 @@ if camera.isOpened():
                     Do_Human_detection = False
                     HD.Stop()
                 # Test
-                # Do_Human_detection = True
+                Do_Human_detection = False
                 # Do_Lane_following =False
 
                 # if frame % frame_divisor_Stop_line_detection == 0 :
@@ -206,10 +206,11 @@ if camera.isOpened():
                 Lane following
                 '''
                 if Do_Lane_following: 
-                    LF.Run(perspectiveTransform_img, timedifferent, 
+                    LFIMG = LF.Run(perspectiveTransform_img, timedifferent, 
                                     right_turning_mode_distance_threshold = 15)
                     if not Do_Human_detection:
-                        outputIMG = img
+                        # outputIMG = img
+                        outputIMG = LFIMG
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
                         controller.go_stright(14)
@@ -247,10 +248,12 @@ if camera.isOpened():
             Stage 2: Calulate paths and go to the position in front of the stop line
             '''
             if Stage.isStage(2) and not Stop:
+                time.sleep(1)
                 if not Navigator.complete:
                     outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
                 else :
                     Navigator.GotoStopPoint(controller=controller)
+                    Main_odometer.distance+=7
                     # Stage.setPause()
                     Stage.nextStage()
 

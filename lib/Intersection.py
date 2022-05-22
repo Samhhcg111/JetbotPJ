@@ -15,14 +15,23 @@ class Intersesction_Navigator:
             #     section=Intersection(i,np.array([None,3,4,5,2]),(2,2))
             ############
 
-            ####test####
+            ####test OurMap####
+            # if (i == 1):
+            #     section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
+            # if (i == 2):
+            #     section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
+            # if (i == 3):
+            #     section = Intersection(i,np.array([9,10,None,12,None]),(4,3))
+            ############
+            '''
+            Test TA MAP
+            '''
             if (i == 1):
                 section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
             if (i == 2):
-                section = Intersection(i,np.array([5,None,7,8,None]),(2,3))
+                section = Intersection(i,np.array([11,12,13,5,None]),(2,3))
             if (i == 3):
-                section = Intersection(i,np.array([9,10,None,12,None]),(4,3))
-            ############
+                section = Intersection(i,np.array([6,14,15,7]),(4,3))
             if section is not None:
                 self.__intersections[i]=section
                 
@@ -280,7 +289,8 @@ class Intersection:
     # aruco_distance = 7.5+5 # NoteBook Test
     aruco_distance = 18 #test
     # intersection_size = 15 # NoteBook Test
-    intersection_size = 15.5*2 #test
+    # intersection_size = 15.5*2 #test
+    intersection_size = 16*2 #test TA map
     stop_distance = 15
     def __init__(self,id:int,arucoIds:np.array,pos):
         self.id=id
@@ -330,6 +340,7 @@ class Intersection:
         if len(arucoIds)>5:
             if arucoIds[5] is not None:
                 a = 21.5 # aruco distance
+                b=b+2.5 # plus line width
                 corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]])
                 ids.append([arucoIds[5]])
                 self.entries[0] = (b2,b)

@@ -260,8 +260,8 @@ class LandFollower:
                 vot_right = 0.12
 
             #### Temp
-            # vot_left = 0
-            # vot_right = 0
+            vot_left = 0
+            vot_right = 0
 
             # Calculate forward velocity
             # velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
