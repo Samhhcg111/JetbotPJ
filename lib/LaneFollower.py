@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 from lib.odometer import odometer
+# from lib.ColorDetector import ColorDetector
+# from lib.HSV_and_Area_Data_Slider import HSV_and_Area_Setting
 
 class LandFollower:
 
@@ -119,7 +121,7 @@ class LandFollower:
         # Determine if num of points is enougth for fitting
         len_left = len(leftx)
         len_right = len(rightx)
-        if len_left>=3 and len_right>=3:
+        if len_left>=5 and len_right>=5:
             lane = True
         else:
             lane = False
@@ -167,13 +169,14 @@ class LandFollower:
                 return (dx_in_cm, dy_in_cm)
 
 
-    def __init__(self,Controller):
+    def __init__(self, Controller, ColorDetector):
         self.controller = Controller
         self.pid_count = 0
         self.robot = self.controller.robot
         self.dl_and_right_turn_condition = np.zeros((50,2)) # First column is dt, second column is condition (0 or 1)
         self.right_turn_mode = False
         self.odometer = odometer(self.controller)
+        self.color_detector = ColorDetector
 
     def Stop(self):
         self.pid_count = 0
@@ -209,14 +212,50 @@ class LandFollower:
             if sum_of_distance > distance_required:
                 sum_of_frame = i
                 break
-        if sum_of_frame>8:
+        if sum_of_frame>8: ## Originally it is 8 ##
             self.right_turn_mode = (sum_of_condition_meet > 0.8*sum_of_frame)
         # print(sum_of_frame)
         
     
 
+    def lane_color_finder(
+        self, 
+        perspective_transformed_image,
+        lane_all_pts,
+        HSV_Data = [170,180,60,120,111,180,1500],
+        offset = 40,
+        step = 40
+        ):
+        # Extract 5 points in the lane
+        lane_reduced_pts = np.array([[ lane_all_pts[-index] for index in range(1,200,step) ]])
+        # Ofset the 5 points left and right for 40 pixel to create boundaries
+        left_offset = np.array([[ [-offset, 0] for index in range(1,200,step) ]])
+        right_offset = np.array([[ [offset, 0] for index in range(1,200,step) ]])
+        left_boundary  = lane_reduced_pts + left_offset
+        right_boundary = np.flip((lane_reduced_pts + right_offset), axis=1) # Flipped to create CW boundary
+        # Join left and right boundary together as CW boundary
+        boundary = np.concatenate((left_boundary, right_boundary), axis=1)
+        # Find the lane color whin boundary
+        self.color_detector.LaneColorDetector(
+            image = perspective_transformed_image,
+            ROI=boundary,
+            lane_yellow_HSV_Data = HSV_Data
+        )
+        return self.color_detector.YellowLane
+        
+        
+
    
-    def Run(self, perspectiveTransform_img, dt, right_turning_mode_distance_threshold=20):
+    def Run(
+        self, 
+        perspectiveTransform_img, 
+        dt, 
+        HSV_Data = [5,30,30,150,220,255,100],
+        right_turning_mode_distance_threshold=20,
+        pixel_per_cm = 9.3, 
+        lane_correction_gain=0.5,
+        Stop=False
+        ):
         '''
         The main part of lane follower
         '''
@@ -225,71 +264,107 @@ class LandFollower:
         binary_img_segment = LandFollower.do_segment(binary_img*255)
         left_fit, right_fit, left_line_pts, right_line_pts, center_line_pts = LandFollower.find_line(binary_img_segment, nwindows=18, minpix=15)
         
-        # Check if lane exist
-        if left_fit is not None:
-            binary_img_segment_lane_detection = cv2.polylines(binary_img_segment, [center_line_pts], False, (255,0,0), 1)
-            binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
-            binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
-            
-            dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm)
-
-            outputIMG=binary_img_segment_lane_detection_left_right
-
-            ex = dx_in_cm
-            ey = dy_in_cm
-
-            # PID
-            if self.pid_count == 0:
-                self.ex_prev = ex
-                self.ey_prev = ey
-                self.pid_count = 1
-            # Filter out extreme value
-            if np.abs(ey)>=12:  #7
-                ey=np.sign(ey)*12
-            # Get the feedback
-            (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
- 
-            # Apply the min vot
-            if vot_left <= 0.07: #0.07498
-                vot_left = 0.07
-            elif vot_left >= 0.12:
-                vot_left = 0.12
-            if vot_right <= 0.065: #0.07234
-                vot_right = 0.065
-            elif vot_right >0.12:
-                vot_right = 0.12
-
-            #### Temp
-            vot_left = 0
-            vot_right = 0
-
-            # Calculate forward velocity
-            # velocity = self.odometer.forward_velocity_calculator(np.array([[vot_left], [vot_right]]))
-            self.odometer.odometerCalibrate(np.array([[vot_left], [vot_right]]),dt=dt,c=0.86)
-            velocity = self.odometer.velocity
-            # Check if entering right turning mode is needed
-            self.RightTrakingChecker(left_fit, dt, velocity, distance_required=right_turning_mode_distance_threshold)
-            if self.right_turn_mode:
-                self.dl_and_right_turn_condition = np.zeros((50,2)) # reset
-                return binary_img_segment
-
-            
-            # update the error
-            self.ex_prev = ex
-            self.ey_prev = ey
-
-            # Output image
-            output=binary_img_segment_lane_detection
-            self.robot.left_motor.value=vot_left
-            self.robot.right_motor.value=vot_right
-            cv2.putText(output,'PID_info: ',(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-            cv2.putText(output,'ex: '+str(ex)+' ey: '+str(ey),(50,80),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-            cv2.putText(output,'vot_lef: '+str(vot_left)+' vot_right: '+str(vot_right),(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
-            
-            return outputIMG
-
-        else:
+        # Check if lane exist (early return)
+        if left_fit is None:
             self.robot.left_motor.value=0
             self.robot.right_motor.value=0
             print ('lane is not found')
             return perspectiveTransform_img
+
+        '''
+            Check the color of left and right lane
+                Yellow: True
+                White: False 
+        '''
+        left_lane_yellow = self.lane_color_finder(
+            perspective_transformed_image = perspectiveTransform_img, 
+            lane_all_pts = left_line_pts,
+            HSV_Data = HSV_Data
+            )
+        right_lane_yellow = False
+
+        if not left_lane_yellow:
+            right_lane_yellow = self.lane_color_finder(
+            perspective_transformed_image = perspectiveTransform_img, 
+            lane_all_pts = right_line_pts,
+            HSV_Data = HSV_Data 
+            )
+        else:
+            print('left lane is yellow')
+
+        '''
+            Determine the centerline according to the color of left and right lane
+            Centerline remains the same if left lane is yellow
+        '''
+        if not left_lane_yellow:
+            if right_lane_yellow: # right lane is also yellow => at the oppsite lane
+                center_line_pts = center_line_pts + np.array([ [int(15*pixel_per_cm*lane_correction_gain),  0] for y in range(200,401) ])
+                print('right lane is yellow')
+            else: # right lane is white => centerline is yellow line
+                # center_line_pts = center_line_pts + np.array([ [int(7.5*pixel_per_cm*lane_correction_gain), 0] for y in range(200,401) ])
+                print('nothing yellow')
+        #print(center_line_pts)
+        
+        # Plot the left, center, and right lane
+        binary_img_segment_lane_detection = cv2.polylines(binary_img_segment, [center_line_pts], False, (255,0,0), 1)
+        binary_img_segment_lane_detection_left = cv2.polylines(binary_img_segment_lane_detection, [left_line_pts], False, (255,0,0), 1)
+        binary_img_segment_lane_detection_left_right = cv2.polylines(binary_img_segment_lane_detection_left, [right_line_pts], False, (255,0,0), 1)
+        outputIMG=binary_img_segment_lane_detection_left_right
+        
+        # Calculate dx and dy
+        dx_in_cm, dy_in_cm = LandFollower.calculate_dx_dy_in_cm(center_line_pts, dl_in_cm=dl_in_cm, pixel_per_cm=pixel_per_cm)
+        ex = dx_in_cm
+        ey = dy_in_cm
+
+        # PID
+        if self.pid_count == 0:
+            self.ex_prev = ex
+            self.ey_prev = ey
+            self.pid_count = 1
+        # Filter out extreme value
+        if np.abs(ey)>=12:  #7
+            ey=np.sign(ey)*12
+        # Get the feedback
+        (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
+
+        # Apply the min vot
+        if vot_left <= 0.07: #0.07498
+            vot_left = 0.07
+        elif vot_left >= 0.12:
+            vot_left = 0.12
+        if vot_right <= 0.065: #0.07234
+            vot_right = 0.065
+        elif vot_right >0.12:
+            vot_right = 0.12
+
+        #### Temp
+        if Stop:
+            vot_left = 0
+            vot_right = 0
+
+        # Calculate forward velocity
+        self.odometer.odometerCalibrate(np.array([[vot_left], [vot_right]]),dt=dt,c=0.86)
+        velocity = self.odometer.velocity
+
+        # Check if entering right turning mode is needed
+        self.RightTrakingChecker(left_fit, dt, velocity, distance_required=right_turning_mode_distance_threshold)
+        if self.right_turn_mode:
+            self.dl_and_right_turn_condition = np.zeros((50,2)) # reset
+            return binary_img_segment
+        
+        # update the error
+        self.ex_prev = ex
+        self.ey_prev = ey
+
+        # Output image
+        output=binary_img_segment_lane_detection
+        self.robot.left_motor.value=vot_left
+        self.robot.right_motor.value=vot_right
+        cv2.putText(output,'PID_info: ',(50,50),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+        cv2.putText(output,'ex: '+str(ex)+' ey: '+str(ey),(50,80),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+        cv2.putText(output,'vot_lef: '+str(vot_left)+' vot_right: '+str(vot_right),(50,100),cv2.FONT_HERSHEY_SIMPLEX,0.5,(255,0,255),1,cv2.LINE_AA)
+        
+        # Temp
+        #outputIMG = self.color_detector.lane_color_image
+
+        return outputIMG
