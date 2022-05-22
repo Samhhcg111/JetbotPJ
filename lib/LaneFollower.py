@@ -301,7 +301,7 @@ class LandFollower:
                 center_line_pts = center_line_pts + np.array([ [int(15*pixel_per_cm*lane_correction_gain),  0] for y in range(200,401) ])
                 print('right lane is yellow')
             else: # right lane is white => centerline is yellow line
-                center_line_pts = center_line_pts + np.array([ [int(7.5*pixel_per_cm*lane_correction_gain), 0] for y in range(200,401) ])
+                # center_line_pts = center_line_pts + np.array([ [int(7.5*pixel_per_cm*lane_correction_gain), 0] for y in range(200,401) ])
                 print('nothing yellow')
         #print(center_line_pts)
         
