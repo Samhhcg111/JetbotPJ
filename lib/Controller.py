@@ -38,7 +38,7 @@ class Controller:
         MC = (self.M.dot(self.C))
         self.MC_inv = np.linalg.inv(MC)
         self.__TurnParam = [1.7,0,1.2,0,2,0,2.3,0]
-        self.__StrightParam = [0,1.1,1]
+        self.__StraightParam = [0,1.1,1]
         self.robot = Robot
     def get_feedback(self, ex, ex_prev, ey, ey_prev, dt):
         # Calculate the feedback
@@ -74,9 +74,9 @@ class Controller:
         '''
         self.__TurnParam = [B,C,B2_0,C2_0,B2_1,C2_1,B3,C3]
 
-    def setStrightParam(self,A=0,B=1,C=0):
+    def setStraightParam(self,A=0,B=1,C=0):
         '''
-        Set the 'go stright' curve parameters of function:
+        Set the 'go straight' curve parameters of function:
         waiting seconds = ( A*distance^2 + B*distance + c ) / Velocity
         
         Args:
@@ -84,7 +84,7 @@ class Controller:
             B: linear coefficent
             C: constant coefficent
         '''
-        self.__StrightParam = [A,B,C]
+        self.__StraightParam = [A,B,C]
 
     def turn(self,radian,radianbias:float=0):
         '''
@@ -123,15 +123,15 @@ class Controller:
             self.robot.left_motor.value = 0
             self.robot.right_motor.value = 0
             # print('command: turning is done')
-    def go_stright(self,distance):
+    def go_straight(self,distance):
         '''
         Open-loop control.Move forward at constant speed in specific time.
 
         Args:
             distance: unit [cm]
         '''
-        print('Go stright '+str(distance)+' cm')
-        A,B,C = self.__StrightParam
+        print('Go straight '+str(distance)+' cm')
+        A,B,C = self.__StraightParam
         v = 20
         if distance < 0 :
             v = -v
@@ -171,11 +171,11 @@ class Controller:
             self.robot.left_motor.value = 0
             self.robot.right_motor.value = 0
         
-    def Od_go_stright(self,distance):
+    def Od_go_straight(self,distance):
         '''
         Using odometer to go to a specific distance
         '''
-        print('Go stright(Odometer) '+str(distance)+' cm')
+        print('Go straight(Odometer) '+str(distance)+' cm')
         v=10
         if distance < 0 :
             v = -v

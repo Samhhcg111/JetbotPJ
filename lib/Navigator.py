@@ -159,14 +159,14 @@ class Navigator:
         return output
     def GotoStopPoint(self,controller):
         controller.turn(self.crossPath[0])
-        controller.go_stright(self.crossPath[1])
+        controller.go_straight(self.crossPath[1])
 
     def GotoEntry(self,controller):
         controller.turn(self.crossPath[2])
-        # controller.go_stright(self.crossPath[3]+4)
-        controller.go_stright(self.crossPath[3])
+        # controller.go_straight(self.crossPath[3]+4)
+        controller.go_straight(self.crossPath[3])
         controller.turn(self.crossPath[4],math.radians(-5))
-        controller.go_stright(self.crossPath[5])
+        controller.go_straight(self.crossPath[5])
       
     def RunAtIntersection(self,src_img,mtx,dist,Critical_distance = 30):
         '''

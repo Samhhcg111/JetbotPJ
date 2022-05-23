@@ -74,11 +74,11 @@ class HumanDetector:
         if self.isDetectHuman == True:
             #Controller.robotStop()
             self.Controller.turn(radian=np.deg2rad(-70))
-            self.Controller.go_stright(18)
+            self.Controller.go_straight(18)
             self.Controller.turn(radian=np.deg2rad(70))
-            self.Controller.go_stright(18)
+            self.Controller.go_straight(18)
             self.Controller.turn(radian=np.deg2rad(70))
-            self.Controller.go_stright(15)
+            self.Controller.go_straight(15)
             self.Controller.turn(radian=np.deg2rad(-70))
             self.human_detection_count = 0
             self.isDetectHuman = False

@@ -87,7 +87,7 @@ if camera.isOpened():
     '''
     Controller setting
     '''
-    # controller.setStrightParam(B=1.1,C=1)
+    # controller.setStraightParam(B=1.1,C=1)
     controller.setTurnParam(1.7+0.2,0,1.2+0.2,0,2+0.2,0,2.3,0)
 
     '''
@@ -223,9 +223,9 @@ if camera.isOpened():
                     #     outputIMG = Lane_Following_img
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
-                        controller.go_stright(14)
+                        controller.go_straight(14)
                         controller.turn(np.deg2rad(70))
-                        controller.go_stright(7.5)
+                        controller.go_straight(7.5)
 
                 '''
                 Aruco detection
