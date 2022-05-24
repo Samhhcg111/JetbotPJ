@@ -26,10 +26,16 @@ class Dijkstra:
                 j+=1
             i+=1
     #return vertices list and entry of road
+    def resetDist(self):
+        for v in self.vertices:
+            v.dist = 100
+            v.isExplore = False
     def getpath(self,i0:int,j0:int,i_dest:int,j_dest:int):
+        self.resetDist()
         path=[]
         map=self.digitmap
         for v in self.vertices:
+            # print([v.i,v.j])
             if(v.i==i0 and v.j==j0):
                 v.dist=0
                 Go_V=v
