@@ -12,7 +12,6 @@ from lib.Navigator import Navigator as NV
 from lib.ColorDetector import ColorDetector
 from lib.human_detection_class import HumanDetector
 from lib.HSV_and_Area_Data_Slider import HSV_and_Area_Setting as HSV_DATA
-from lib.odometer import odometer 
 import sys
 sys.path.append('../')
 from jetbot.robot import Robot
@@ -30,7 +29,7 @@ Key_visualize_Ref = True
 
 ############# start ##############
 Mycam = MyCam('calibration.npz')
-map_path = 'testmap.csv'
+map_path = 'map.csv'
 dataPath = './data'
 # To flip the image, modify the flip_method parameter (0 and 2 are the most common)
 print(MyCam.gstreamer_pipeline(flip_method=0))
@@ -61,10 +60,11 @@ if camera.isOpened():
     Stage = StageSwitch(TotalStage=4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
-    Navigator = NV(map_path,0,1,4,5)
+    Navigator = NV(map_path,0,0,6,6)
     HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
-    TrafficLightHSV = HSV_DATA(dataPath,'TrafficLightHSV')
+    TrafficLightHSV_green = HSV_DATA(dataPath,'TrafficLightHSV')
+    TrafficLightHSV_Red = HSV_DATA(dataPath,'TrafficLightHSVRed')
     LaneYellowHSV = HSV_DATA(dataPath, 'LaneYellowHSV')
     frame = 0
 
@@ -82,8 +82,8 @@ if camera.isOpened():
     Stage.setStage(1)
     StopLineROI = np.array([    [(200, 400), (380, 400), (380, 180), (200,180)]    ])
     IntersectionStopLineROI = np.array([    [(160, 400), (440, 400), (440, 210), (160,210)]    ])
-    TrafficLightHSV.setValue([59, 94, 45, 141, 95, 213, 300])
-
+    TrafficLightHSV_green.setValue([59, 94, 45, 141, 95, 213, 300])
+    # TrafficLightHSV_Red.slider(window_name="output")
     '''
     Controller setting
     '''
@@ -105,8 +105,8 @@ if camera.isOpened():
     Main_odometer = LF.odometer
     # distance_Lane_following = 0
     # distance_Stop_line_detection = 0
-    distance_Human_detection = [13,60,140,300] #boundaries [cm]
-    distance_Aruco_detection = 60
+    distance_Human_detection = [10,60,110,180] #boundaries [cm]
+    distance_Aruco_detection = [60,100,120,300]
     '''
     condition swtich
     '''
@@ -163,7 +163,7 @@ if camera.isOpened():
                     Do_Human_detection = False
                     HD.Stop()
                 # Test
-                Do_Human_detection = False
+                # Do_Human_detection = False
                 # Do_Lane_following =False
 
                 # if frame % frame_divisor_Stop_line_detection == 0 :
@@ -175,11 +175,13 @@ if camera.isOpened():
                 #     Do_Stop_line_detection = False
 
                 if frame % frame_divisor_Aruco_detection == 0 :
-                    if Main_odometer.distance >= distance_Aruco_detection:
+                    if Main_odometer.distance >= distance_Aruco_detection[2] and  Main_odometer.distance <= distance_Aruco_detection[3]:
+                        Do_Human_detection = True
+                    elif  Main_odometer.distance >= distance_Aruco_detection[0] and  Main_odometer.distance <= distance_Aruco_detection[1]:                        
                         Do_Aruco_detection = True
-                    else:
+                    else :
                         Do_Aruco_detection = False
-                else:
+                else: 
                     Do_Aruco_detection = False
                 
                 # Start threads #
@@ -218,9 +220,9 @@ if camera.isOpened():
                         right_turning_mode_distance_threshold = 15, 
                         Stop=False
                     )
-                    outputIMG = Lane_Following_img
-                    # if not Do_Human_detection:
-                    #     outputIMG = Lane_Following_img
+                    # outputIMG = Lane_Following_img
+                    if not Do_Human_detection:
+                        outputIMG = Lane_Following_img
                     if LF.right_turn_mode:  # Open loop right turn motion
                         LF.Stop()
                         controller.go_straight(14)
@@ -258,7 +260,7 @@ if camera.isOpened():
             Stage 2: Calulate paths and go to the position in front of the stop line
             '''
             if Stage.isStage(2) and not Stop:
-                time.sleep(1)
+                # time.sleep(1)
                 if not Navigator.complete:
                     outputIMG=Navigator.CalculatePaths(GP,img,Mycam.camera_matrix,Mycam.dist_coeff)
                 else :
@@ -289,16 +291,22 @@ if camera.isOpened():
                 '''
                 Traffic Light detection
                 '''
-                # Traffic_light_marked_img = CD.TrafficLightDetector(
-                #     img,
-                #     green_lower = np.array([TrafficLightHSV.H_min, TrafficLightHSV.S_min, TrafficLightHSV.V_min], np.uint8),
-                #     green_upper = np.array([TrafficLightHSV.H_max, TrafficLightHSV.S_max, TrafficLightHSV.V_max], np.uint8),
-                #     green_area_lower_limit = TrafficLightHSV.Area
-                #     )
-                # outputIMG = Traffic_light_marked_img
+                Traffic_light_marked_img = CD.TrafficLightDetector(
+                    img,
+                    green_lower = np.array([TrafficLightHSV_green.H_min, TrafficLightHSV_green.S_min, TrafficLightHSV_green.V_min], np.uint8),
+                    green_upper = np.array([TrafficLightHSV_green.H_max, TrafficLightHSV_green.S_max, TrafficLightHSV_green.V_max], np.uint8),
+                    green_area_lower_limit = TrafficLightHSV_green.Area,
+                    red_lower=  np.array([TrafficLightHSV_Red.H_min, TrafficLightHSV_Red.S_min, TrafficLightHSV_Red.V_min], np.uint8),
+                    red_upper= np.array([TrafficLightHSV_Red.H_max, TrafficLightHSV_Red.S_max, TrafficLightHSV_Red.V_max], np.uint8),
+                    red_area_lower_limit = TrafficLightHSV_Red.Area
+                    )
+                outputIMG = Traffic_light_marked_img
 
-                # if not CD.RedLight and CD.YellowLight:
-                Stage.nextStage()
+                # if not CD.RedLight :
+                if CD.GreenLingt or CD.YellowLight:
+                    Stage.nextStage()
+                elif not CD.RedLight and not CD.YellowLight and not CD.GreenLingt:
+                    Stage.nextStage()
                 
             '''
             Stage 4: go to the next road
@@ -313,12 +321,19 @@ if camera.isOpened():
             the setStage(5) function to active this stage.
             '''
             if Stage.isStage(5) and not Stop:
-                stop_line_img,stopLineMask = CD.StopLineColorDetector (
-                    perspectiveTransform_img, 
-                    ROI = StopLineROI,
-                    HSV_Data=StopLineHSV.getValue()
-                )
-                outputIMG = stop_line_img
+                '''
+                Traffic Light detection
+                '''
+                Traffic_light_marked_img = CD.TrafficLightDetector(
+                    img,
+                    green_lower = np.array([TrafficLightHSV_green.H_min, TrafficLightHSV_green.S_min, TrafficLightHSV_green.V_min], np.uint8),
+                    green_upper = np.array([TrafficLightHSV_green.H_max, TrafficLightHSV_green.S_max, TrafficLightHSV_green.V_max], np.uint8),
+                    green_area_lower_limit = TrafficLightHSV_green.Area,
+                    red_lower=  np.array([TrafficLightHSV_Red.H_min, TrafficLightHSV_Red.S_min, TrafficLightHSV_Red.V_min], np.uint8),
+                    red_upper= np.array([TrafficLightHSV_Red.H_max, TrafficLightHSV_Red.S_max, TrafficLightHSV_Red.V_max], np.uint8),
+                    red_area_lower_limit = TrafficLightHSV_Red.Area
+                    )
+                outputIMG = Traffic_light_marked_img
 
             '''
             Basic information showing
@@ -341,7 +356,7 @@ if camera.isOpened():
         # ESC pressed to quit
         if keyCode%256 == 27:
             StopLineHSV.saveData()
-            TrafficLightHSV.saveData()
+            TrafficLightHSV_Red.saveData()
             # LaneYellowHSV.saveData() # Save data after using slider
             print("[Main] Escape hit, closing...")
             break
@@ -355,6 +370,7 @@ if camera.isOpened():
                 Key_visualize_Ref=True
                 controller.robotStop()
                 Stop = True
+                Main_odometer.distance = 0
 
         # T next stage
         if keyCode%256 == 116:

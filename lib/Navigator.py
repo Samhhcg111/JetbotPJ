@@ -130,6 +130,8 @@ class Navigator:
                             closeId = ids[i][0]
                 self.intersection_id,self.IntersectionPos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
                 Global_DET.setPos(self.IntersectionPos[0],self.IntersectionPos[1])
+                # print(self.IntersectionPos)
+                # print(self.goalGlobalPos)
                 self.genPath(self.IntersectionPos[0],self.IntersectionPos[1],self.goalGlobalPos[0],self.goalGlobalPos[1])
                 nextPos = self.path[1]
                 self.entry = self.__Identify_entry(np.array([self.IntersectionPos[0],self.IntersectionPos[1]]),np.array([nextPos.i,nextPos.j]))

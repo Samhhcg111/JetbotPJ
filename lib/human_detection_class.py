@@ -56,7 +56,7 @@ class HumanDetector:
                             (0, 255, 0), 2)
             area = (xA-xB)*(yA-yB)  
             print ('area = ', area)
-            if area > 35000:
+            if area > 30000:
                 self.human_detection_count += 1
                 print("HumanDetection: true")           
             else:        
@@ -75,11 +75,11 @@ class HumanDetector:
             #Controller.robotStop()
             self.Controller.turn(radian=np.deg2rad(-70))
             self.Controller.go_straight(18)
-            self.Controller.turn(radian=np.deg2rad(70))
+            self.Controller.turn(radian=np.deg2rad(55))
             self.Controller.go_straight(18)
-            self.Controller.turn(radian=np.deg2rad(70))
-            self.Controller.go_straight(15)
-            self.Controller.turn(radian=np.deg2rad(-70))
+            # self.Controller.turn(radian=np.deg2rad(60))
+            # self.Controller.go_straight(15)
+            # self.Controller.turn(radian=np.deg2rad(-70))
             self.human_detection_count = 0
             self.isDetectHuman = False
 

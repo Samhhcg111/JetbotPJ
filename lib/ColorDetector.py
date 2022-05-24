@@ -37,7 +37,7 @@ class ColorDetector:
     def TrafficLightDetector (
         self,
         imageFrame,
-        ROI = np.array([   [(0, 0), (290, 0), (290, 434), (0, 434)]   ]),
+        ROI = np.array([   [(0, 0), (190, 0), (190, 200), (0, 200)]   ]),
         red_lower = np.array([160, 60, 180], np.uint8),  # 136, 87, 111
         red_upper = np.array([180, 110, 255], np.uint8), # 180, 255, 255
         red_area_lower_limit = 300,

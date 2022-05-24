@@ -27,11 +27,11 @@ class Intersesction_Navigator:
             Test TA MAP
             '''
             if (i == 1):
-                section = Intersection(i,np.array([None,2,3,None,None,1]),(2,1))
+                section = Intersection(i,np.array([None,7,3,None,None,1]),(4,0))
             if (i == 2):
-                section = Intersection(i,np.array([11,12,13,5,None]),(2,3))
+                section = Intersection(i,np.array([11,12,13,5,None]),(4,2))
             if (i == 3):
-                section = Intersection(i,np.array([6,14,15,7]),(4,3))
+                section = Intersection(i,np.array([6,14,15,4]),(6,2))
             if section is not None:
                 self.__intersections[i]=section
                 

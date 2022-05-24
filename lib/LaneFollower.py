@@ -290,7 +290,8 @@ class LandFollower:
             HSV_Data = HSV_Data 
             )
         else:
-            print('left lane is yellow')
+            pass
+            # print('left lane is yellow')
 
         '''
             Determine the centerline according to the color of left and right lane
@@ -299,10 +300,11 @@ class LandFollower:
         if not left_lane_yellow:
             if right_lane_yellow: # right lane is also yellow => at the oppsite lane
                 center_line_pts = center_line_pts + np.array([ [int(15*pixel_per_cm*lane_correction_gain),  0] for y in range(200,401) ])
-                print('right lane is yellow')
+                # print('right lane is yellow')
             else: # right lane is white => centerline is yellow line
                 # center_line_pts = center_line_pts + np.array([ [int(7.5*pixel_per_cm*lane_correction_gain), 0] for y in range(200,401) ])
-                print('nothing yellow')
+                # print('nothing yellow')
+                pass
         #print(center_line_pts)
         
         # Plot the left, center, and right lane
