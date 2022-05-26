@@ -18,8 +18,9 @@ class LaneFollower_threading:
         midpoint, 
         nwindows, 
         margin, 
-        minpix,
+        minpix = 30,
         ):
+        #### minpix不打30會沒有???
         '''
         Funciton: find_line
         Args:
@@ -72,7 +73,7 @@ class LaneFollower_threading:
         midpoint, 
         nwindows, 
         margin, 
-        minpix):
+        minpix = 30):
 
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint

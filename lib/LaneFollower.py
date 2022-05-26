@@ -67,13 +67,6 @@ class LandFollower:
             margin:    Set the width of the windows +/- margin
             minpix:    Create empty lists to receive left and right lane pixel indices
         '''
-        #initial the value used
-        # len_left = 0
-        # len_right = 0
-        # lefty = 0
-        # leftx = 0
-        # righty = 0
-        # rightx = 0
 
         # # Take a histogram of the bottom half of the image
         # histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
@@ -139,17 +132,28 @@ class LandFollower:
         300, 
         9, 
         50, 
-        30))
+        30,))
         leftthreading.start()
         rightthreading = threading.Thread(target=Lt.find_line_right_threading,args=(binary_warped, 
         300, 
         9, 
         50, 
-        30))
+        30,))
         rightthreading.start()
 
         leftthreading.join()
         rightthreading.join()
+
+        Lt.find_line_left_threading(binary_warped, 
+        300, 
+        9, 
+        50, 
+        30,)
+        Lt.find_line_right_threading(binary_warped, 
+        300, 
+        9, 
+        50, 
+        30,)
 
         len_left = Lt.len_left
         len_right = Lt.len_right
@@ -157,7 +161,6 @@ class LandFollower:
         leftx = Lt.leftx
         righty = Lt.righty
         rightx = Lt.rightx
-
 
         if len_left>=5 and len_right>=5:
             lane = True
