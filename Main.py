@@ -117,6 +117,7 @@ if camera.isOpened():
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
         start_time=time.time()
+        start_CPU_time = time.process_time()
         # Read from camera and display on windows
         ret, img= camera.read()
         #reset frame if frame is greater than 60
@@ -210,6 +211,7 @@ if camera.isOpened():
                 '''
                 Lane following
                 '''
+                start_CPU_time = time.process_time()
                 if Do_Lane_following: 
                     Lane_Following_img = LF.Run(
                         perspectiveTransform_img = perspectiveTransform_img, 
@@ -226,6 +228,8 @@ if camera.isOpened():
                         controller.go_straight(14)
                         controller.turn(np.deg2rad(70))
                         controller.go_straight(7.5)
+                end_CPU_time = time.process_time()
+                print(end_CPU_time-start_CPU_time)
 
                 '''
                 Aruco detection
