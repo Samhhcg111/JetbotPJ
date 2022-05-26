@@ -4,12 +4,22 @@ from lib.odometer import odometer
 import threading
 
 class LaneFollower_threading:
+    def __init__(self):
+        self.len_left = 0
+        self.len_right = 0
+        self.lefty = 0 
+        self.leftx = 0 
+        self.righty = 0
+        self.rightx = 0
+
     def find_line_left_threading(
+        self,
         binary_warped, 
-        midpoint = 300, 
-        nwindows = 9, 
-        margin = 50, 
-        minpix = 30):
+        midpoint, 
+        nwindows, 
+        margin, 
+        minpix,
+        ):
         '''
         Funciton: find_line
         Args:
@@ -50,17 +60,19 @@ class LaneFollower_threading:
         
         left_lane_inds = np.concatenate(left_lane_inds)
 
-        leftx = nonzerox[left_lane_inds]
-        lefty = nonzeroy[left_lane_inds]
+        self.leftx = nonzerox[left_lane_inds]
+        self.lefty = nonzeroy[left_lane_inds]
 
-        len_left = len(leftx)
+        self.len_left = len(self.leftx) 
+        
 
     def find_line_right_threading(
+        self,
         binary_warped, 
-        midpoint = 300, 
-        nwindows = 9, 
-        margin = 50, 
-        minpix = 30):
+        midpoint, 
+        nwindows, 
+        margin, 
+        minpix):
 
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:,:], axis=0)
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
@@ -82,12 +94,14 @@ class LaneFollower_threading:
             win_xright_high = rightx_current + margin
             good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & 
             (nonzerox >= win_xright_low) &  (nonzerox < win_xright_high)).nonzero()[0]
+            right_lane_inds.append(good_right_inds)
             if len(good_right_inds) > minpix:        
                 rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
         right_lane_inds = np.concatenate(right_lane_inds)
 
-        rightx = nonzerox[right_lane_inds]
-        righty = nonzeroy[right_lane_inds] 
+        self.rightx = nonzerox[right_lane_inds]
+        self.righty = nonzeroy[right_lane_inds] 
 
-        len_right = len(rightx)
+        self.len_right = len(self.rightx) 
+        
