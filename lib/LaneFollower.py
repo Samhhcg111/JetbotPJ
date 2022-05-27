@@ -253,7 +253,7 @@ class LandFollower:
         HSV_Data = [5,30,30,150,220,255,100],
         right_turning_mode_distance_threshold=20,
         pixel_per_cm = 9.3, 
-        lane_correction_gain=0.5,
+        lane_correction_gain=0.8,
         Stop=False
         ):
         '''
@@ -330,12 +330,12 @@ class LandFollower:
         (vot_left, vot_right) = self.controller.get_feedback(ex, self.ex_prev, ey, self.ey_prev, dt)
 
         # Apply the min vot
-        if vot_left <= 0.07: #0.07498
-            vot_left = 0.07
+        if vot_left <= 0.07498: #0.07498 #0.07
+            vot_left = 0.07498
         elif vot_left >= 0.12:
             vot_left = 0.12
-        if vot_right <= 0.065: #0.07234
-            vot_right = 0.065
+        if vot_right <= 0.07234: #0.07234 #0.065
+            vot_right = 0.07234
         elif vot_right >0.12:
             vot_right = 0.12
 

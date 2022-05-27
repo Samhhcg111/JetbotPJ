@@ -57,7 +57,7 @@ if camera.isOpened():
     controller = Controller(Robot=robot)
     CD = ColorDetector()
     LF = LandFollower(Controller=controller, ColorDetector=CD)
-    Stage = StageSwitch(TotalStage=4)
+    Stage = StageSwitch(TotalStage = 4)
     target_pos=np.array([[5],[5]])
     GP = GlobalPosDET(0,1)
     Navigator = NV(map_path,0,0,6,6)
@@ -105,7 +105,7 @@ if camera.isOpened():
     Main_odometer = LF.odometer
     # distance_Lane_following = 0
     # distance_Stop_line_detection = 0
-    distance_Human_detection = [10,60,110,180] #boundaries [cm]
+    distance_Human_detection = [10,60,110,170] #boundaries [cm]
     distance_Aruco_detection = [60,100,120,300]
     '''
     condition swtich
@@ -114,6 +114,8 @@ if camera.isOpened():
     Do_Human_detection = False
     Do_Stop_line_detection = False
     Do_Aruco_detection = False
+    allow_human_detection = True
+    N0_trafficLight_count = 0
  ########################## main loop #############################  
     while cv2.getWindowProperty("output", 0) >= 0:
         start_time=time.time()
@@ -151,21 +153,22 @@ if camera.isOpened():
                     Do_Lane_following = True
                 else:
                     Do_Lane_following = False
-                
-                if frame % frame_divisor_Human_detection == 0 :
-                    if Main_odometer.distance >= distance_Human_detection[2] and  Main_odometer.distance <= distance_Human_detection[3]:
-                        Do_Human_detection = True
-                    elif  Main_odometer.distance >= distance_Human_detection[0] and  Main_odometer.distance <= distance_Human_detection[1]:                        
-                        Do_Human_detection = True
-                    else :
+                if allow_human_detection:
+                    if frame % frame_divisor_Human_detection == 0 :
+                        if Main_odometer.distance >= distance_Human_detection[2] and  Main_odometer.distance <= distance_Human_detection[3]:
+                            Do_Human_detection = True
+                        elif  Main_odometer.distance >= distance_Human_detection[0] and  Main_odometer.distance <= distance_Human_detection[1]:                        
+                            Do_Human_detection = True
+                        else :
+                            Do_Human_detection = False
+                    else: 
                         Do_Human_detection = False
-                else: 
+                        HD.Stop()
+                else:
                     Do_Human_detection = False
-                    HD.Stop()
                 # Test
                 # Do_Human_detection = False
                 # Do_Lane_following =False
-
                 # if frame % frame_divisor_Stop_line_detection == 0 :
                 #     if Main_odometer.distance == distance_Stop_line_detection: 
                 #         Do_Stop_line_detection = True
@@ -176,14 +179,14 @@ if camera.isOpened():
 
                 if frame % frame_divisor_Aruco_detection == 0 :
                     if Main_odometer.distance >= distance_Aruco_detection[2] and  Main_odometer.distance <= distance_Aruco_detection[3]:
-                        Do_Human_detection = True
+                        Do_Aruco_detection = True
                     elif  Main_odometer.distance >= distance_Aruco_detection[0] and  Main_odometer.distance <= distance_Aruco_detection[1]:                        
                         Do_Aruco_detection = True
                     else :
                         Do_Aruco_detection = False
                 else: 
                     Do_Aruco_detection = False
-                
+                # print('[Main debug] '+str(Do_Human_detection))
                 # Start threads #
                 if Do_Human_detection:
                     HumandetectThread = threading.Thread(target=HD.Run,args=(undistort_img,))
@@ -208,7 +211,8 @@ if camera.isOpened():
                     if HD.isDetectHuman:
                         HD.do_human_aviodance()
                         HD.Stop()
-            
+                        Main_odometer.distance+=10
+                        allow_human_detection = False
                 '''
                 Lane following
                 '''
@@ -268,7 +272,7 @@ if camera.isOpened():
                     Main_odometer.distance+=7
                     # Stage.setPause()
                     Stage.nextStage()
-
+                    trafficLight_count = 0
             '''
             Stage 3: Recalculate paths and wait for the green light
             '''
@@ -302,11 +306,16 @@ if camera.isOpened():
                     )
                 outputIMG = Traffic_light_marked_img
 
-                # if not CD.RedLight :
+                if CD.RedLight :
+                    N0_trafficLight_count = 0
                 if CD.GreenLingt or CD.YellowLight:
+                    print('[Main] Green or Yellow light, go')
                     Stage.nextStage()
                 elif not CD.RedLight and not CD.YellowLight and not CD.GreenLingt:
-                    Stage.nextStage()
+                    N0_trafficLight_count += 1
+                    if N0_trafficLight_count > 10:
+                        print('[Main] No traffic light, go')
+                        Stage.nextStage()
                 
             '''
             Stage 4: go to the next road
@@ -316,6 +325,7 @@ if camera.isOpened():
                     Navigator.Stop()
                     Stage.nextStage()
                     start_time = time.time()
+                    allow_human_detection = True
             '''
             Function testing stage: remember to set the total_stage to the number '5' and use
             the setStage(5) function to active this stage.
@@ -371,7 +381,8 @@ if camera.isOpened():
                 controller.robotStop()
                 Stop = True
                 Main_odometer.distance = 0
-
+                allow_human_detection = True
+                N0_trafficLight_count = 0
         # T next stage
         if keyCode%256 == 116:
             print('[Main] Force next stage')

@@ -166,6 +166,8 @@ class Navigator:
     def GotoEntry(self,controller):
         controller.turn(self.crossPath[2])
         # controller.go_straight(self.crossPath[3]+4)
+        if abs(self.crossPath[2])>math.radians(70):
+            self.crossPath[3] = self.crossPath[3]-6 
         controller.go_straight(self.crossPath[3])
         controller.turn(self.crossPath[4],math.radians(-5))
         controller.go_straight(self.crossPath[5])

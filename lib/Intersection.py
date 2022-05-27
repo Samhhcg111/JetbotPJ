@@ -7,8 +7,8 @@ class Intersesction_Navigator:
     __intersections={}
     def __init__(self):
         self.__intersections={}
-        for i in range(1,4,1): #test
-        # for i in range(1,7,1): # NoteBook Test
+        # for i in range(1,4,1): #test
+        for i in range(1,7,1): # NoteBook Test
             section = None
             ### NoteBook Test ####
             # if(i==2):
@@ -27,11 +27,13 @@ class Intersesction_Navigator:
             Test TA MAP
             '''
             if (i == 1):
-                section = Intersection(i,np.array([None,7,3,None,None,1]),(4,0))
+                section = Intersection(i,np.array([None,16,3,None,None,1]),(4,0))
             if (i == 2):
                 section = Intersection(i,np.array([11,12,13,5,None]),(4,2))
             if (i == 3):
-                section = Intersection(i,np.array([6,14,15,4]),(6,2))
+                section = Intersection(i,np.array([6,14,15,7]),(6,2))
+            if (i == 4):
+                section = Intersection(i,np.array([20,21,22,8]),(4,4))
             if section is not None:
                 self.__intersections[i]=section
                 
