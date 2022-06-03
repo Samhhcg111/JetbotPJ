@@ -130,12 +130,12 @@ class Navigator:
                             closeId = ids[i][0]
                 self.intersection_id,self.IntersectionPos,self.now_entry_point = self.IN.Indentify_intersection(closeId)
                 Global_DET.setPos(self.IntersectionPos[0],self.IntersectionPos[1])
-                # print(self.IntersectionPos)
+                # print('[Navigator] now intersection pos'+str(self.IntersectionPos))
                 # print(self.goalGlobalPos)
                 self.genPath(self.IntersectionPos[0],self.IntersectionPos[1],self.goalGlobalPos[0],self.goalGlobalPos[1])
                 nextPos = self.path[1]
                 self.entry = self.__Identify_entry(np.array([self.IntersectionPos[0],self.IntersectionPos[1]]),np.array([nextPos.i,nextPos.j]))
-                # print('go entry point : '+str(self.entry))
+                print('[Navigator] Target entry point : '+str(self.entry))
                 self.count+=1
                 # print('Debug1')
                 
@@ -146,7 +146,7 @@ class Navigator:
                 self.count+=1
                 vectors.append([JS_radians,JS_distance,SN_radians,SN_distance,NE_radians,NE_distance])
                 # print('count '+str(self.count))
-            if self.count >5:
+            if self.count >20:
                 self.crossPath = np.average(vectors,0)
                 self.complete = True
         return output_img

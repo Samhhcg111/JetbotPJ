@@ -59,7 +59,7 @@ if camera.isOpened():
     LF = LandFollower(Controller=controller, ColorDetector=CD)
     Stage = StageSwitch(TotalStage = 4)
     target_pos=np.array([[5],[5]])
-    GP = GlobalPosDET(0,1)
+    GP = GlobalPosDET(2,0)
     Navigator = NV(map_path,0,0,6,6)
     HD = HumanDetector(controller=controller)
     StopLineHSV = HSV_DATA(dataPath,'TestMapStopLineHSV')
@@ -79,7 +79,7 @@ if camera.isOpened():
     # HSV_and_Area.slider(window_name="output")
     ## StopLine setting ##
     # StopLineHSV.slider(window_name="output")
-    Stage.setStage(1)
+    Stage.setStage(2)
     StopLineROI = np.array([    [(200, 400), (380, 400), (380, 180), (200,180)]    ])
     IntersectionStopLineROI = np.array([    [(160, 400), (440, 400), (440, 210), (160,210)]    ])
     TrafficLightHSV_green.setValue([59, 94, 45, 141, 95, 213, 300])

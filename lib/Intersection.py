@@ -8,7 +8,7 @@ class Intersesction_Navigator:
     def __init__(self):
         self.__intersections={}
         # for i in range(1,4,1): #test
-        for i in range(1,7,1): # NoteBook Test
+        for i in range(1,8,1): # NoteBook Test
             section = None
             ### NoteBook Test ####
             # if(i==2):
@@ -27,13 +27,19 @@ class Intersesction_Navigator:
             Test TA MAP
             '''
             if (i == 1):
-                section = Intersection(i,np.array([None,16,3,None,None,1]),(4,0))
+                section = Intersection(i,np.array([5,1,2,None,None]),(2,0))
             if (i == 2):
-                section = Intersection(i,np.array([11,12,13,5,None]),(4,2))
+                section = Intersection(i,np.array([None,20,17,13,None]),(2,2))
             if (i == 3):
-                section = Intersection(i,np.array([6,14,15,7]),(6,2))
+                section = Intersection(i,np.array([0,12,4,None]),(4,0))
             if (i == 4):
-                section = Intersection(i,np.array([20,21,22,8]),(4,4))
+                section = Intersection(i,np.array([13,16,14,6]),(4,2))
+            if (i == 5):
+                section = Intersection(i,np.array([18,None,19,15]),(4,4))
+            if (i == 6):
+                section = Intersection(i,np.array([7,9,None,8]),(6,2))
+            if (i == 7):
+                section = Intersection(i,np.array([11,21,None,10]),(6,4))    
             if section is not None:
                 self.__intersections[i]=section
                 
@@ -286,13 +292,13 @@ class Intersesction_Navigator:
 
 class Intersection:
     aruco_dictionary=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_100)
-    aruco_size = 3.8
-    aruco_high = 1.2
+    aruco_size = 3.5
+    aruco_high = 0.7
     # aruco_distance = 7.5+5 # NoteBook Test
-    aruco_distance = 18 #test
+    aruco_distance = 23.7 #test
     # intersection_size = 15 # NoteBook Test
     # intersection_size = 15.5*2 #test
-    intersection_size = 16*2 #test TA map
+    intersection_size = 17*2 #test TA map
     stop_distance = 15
     def __init__(self,id:int,arucoIds:np.array,pos):
         self.id=id
@@ -302,7 +308,7 @@ class Intersection:
         corners = []
         self.ids = list(arucoIds)
         a = self.aruco_distance
-        b = self.intersection_size/2
+        b = self.intersection_size/2+2.5 # plus line width
         b2 = self.intersection_size/4
         c = self.aruco_high
         s = self.aruco_size
@@ -310,26 +316,26 @@ class Intersection:
         self.stopPoint = [(-b2,b+stopD),(b+stopD,b2),(b2,-b-stopD),(-b-stopD,-b2)]
         ids = []
         if arucoIds[0] is not None:
-            corners.append([[-b+s,a,0],[-b,a,0],[-b,a+s,0],[-b+s,a+s,0]]) #test
-            # corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) # NoteBook Test
+            # corners.append([[-b+s,a,0],[-b,a,0],[-b,a+s,0],[-b+s,a+s,0]]) #test 2d tage
+            corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]]) # test 3d tage
             ids.append([arucoIds[0]])
             self.entries[0] = (b2,b)
             self.entryNodes[0] = (b2,b2)
         if arucoIds[1] is not None:
-            corners.append([[a,b-s,0],[a,b,0],[a+s,b,0],[a+s,b-s,0]]) #test
-            # corners.append([[a,b,c+s],[a,b+s,c+s],[a,b+s,c],[a,b,c]]) # NoteBook Test
+            # corners.append([[a,b-s,0],[a,b,0],[a+s,b,0],[a+s,b-s,0]]) #test 2d tage
+            corners.append([[a,b,c+s],[a,b+s,c+s],[a,b+s,c],[a,b,c]]) #test 3d tage
             ids.append([arucoIds[1]])
             self.entries[1] = (b,-b2)
             self.entryNodes[1] = (b2,-b2)
         if arucoIds[2] is not None:
-            corners.append([[b-s,-a,0],[b,-a,0],[b,-a-s,0],[b-s,-a-s,0]]) #test
-            # corners.append([[b,-a,c+s],[b+s,-a,c+s],[b+s,-a,c],[b,-a,c]]) # NoteBook Test
+            # corners.append([[b-s,-a,0],[b,-a,0],[b,-a-s,0],[b-s,-a-s,0]]) #test 2d tage
+            corners.append([[b,-a,c+s],[b+s,-a,c+s],[b+s,-a,c],[b,-a,c]]) #test 3d tage
             ids.append([arucoIds[2]])
             self.entries[2] = (-b2,-b)
             self.entryNodes[2] = (-b2,-b2)
         if arucoIds[3] is not None:
-            corners.append([[-a,-b+s,0],[-a,-b,0],[-a-s,-b,0],[-a-s,-b+s,0]]) #test
-            # corners.append([[-a,-b,c+s],[-a,-b-s,c+s],[-a,-b-s,c],[-a,-b,c]]) # NoteBook Test
+            # corners.append([[-a,-b+s,0],[-a,-b,0],[-a-s,-b,0],[-a-s,-b+s,0]]) #test 2d tage
+            corners.append([[-a,-b,c+s],[-a,-b-s,c+s],[-a,-b-s,c],[-a,-b,c]])  #test 3d tage
             ids.append([arucoIds[3]])
             self.entries[3] = (-b,b2)
             self.entryNodes[3] = (-b2,b2)
@@ -342,7 +348,6 @@ class Intersection:
         if len(arucoIds)>5:
             if arucoIds[5] is not None:
                 a = 21.5 # aruco distance
-                b=b+2.5 # plus line width
                 corners.append([[-b,a,c+s],[-b-s,a,c+s],[-b-s,a,c],[-b,a,c]])
                 ids.append([arucoIds[5]])
                 self.entries[0] = (b2,b)

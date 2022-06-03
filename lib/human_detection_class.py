@@ -75,7 +75,7 @@ class HumanDetector:
             #Controller.robotStop()
             self.Controller.turn(radian=np.deg2rad(-70))
             self.Controller.go_straight(18)
-            self.Controller.turn(radian=np.deg2rad(65))
+            self.Controller.turn(radian=np.deg2rad(70))
             self.Controller.go_straight(18)
             # self.Controller.turn(radian=np.deg2rad(60))
             # self.Controller.go_straight(15)
