@@ -1,6 +1,5 @@
 ## Introduction to Jetbot automatic driving car project
 
-We develope 
 
 
 
