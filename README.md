@@ -18,7 +18,9 @@ The map of our testing ground is shown below. Our Jetbot go from START to GOAL. 
 
 
 **Feel free to check out our testing video**  
-https://youtu.be/88C9GjCfox8
+
+https://user-images.githubusercontent.com/80758553/235899900-97b77e17-52fa-4684-b7e7-3ee0541649f0.mp4
+
 
 
 
