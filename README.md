@@ -13,7 +13,8 @@ We developed the software of Jetbot to make it a mini self-driving car. To be mo
 
 The map of our testing ground is shown below. Our Jetbot go from START to GOAL. The pedestrian appears randomly in the straight line. Once the Jetbot meet the pedestrian, it should avoid it.
 
-![fig. 1](https://i.imgur.com/Ml0KB8q.png =80%x)
+![](https://i.imgur.com/MXsTWAk.png)
+
 
 
 **Feel free to check out our testing video**  
